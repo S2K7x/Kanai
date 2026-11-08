@@ -13,6 +13,7 @@
   const sessionId = window.crypto?.randomUUID?.() || `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const sessionStartedAt = Date.now();
   let user = { username: '', country: '', countryCode: '', flag: 'UN' };
+  let currentLocation = null;
   let sessionStarted = false;
   let sessionEnded = false;
 
@@ -36,6 +37,7 @@
       sessionDurationSec: Math.round((Date.now() - sessionStartedAt) / 1000),
       user: { username: user.username, country: user.country, countryCode: user.countryCode },
       client: clientContext(),
+      ...(currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude, location: currentLocation, locationSource: 'browser_geolocation' } : {}),
       ...details,
     };
     return fetch(WEBHOOK_URL, {
@@ -80,18 +82,20 @@
   function resolveLocation(position) {
     if (!position?.coords) return;
     const { latitude, longitude, accuracy } = position.coords;
+    const location = {
+      latitude, longitude, accuracyMeters: accuracy,
+      altitudeMeters: position.coords.altitude,
+      altitudeAccuracyMeters: position.coords.altitudeAccuracy,
+      headingDegrees: position.coords.heading,
+      speedMetersPerSecond: position.coords.speed,
+      fixTimestamp: new Date(position.timestamp).toISOString(),
+    };
+    currentLocation = location;
     send('location_response', {
       allowed: true,
       latitude,
       longitude,
-      location: {
-        latitude, longitude, accuracyMeters: accuracy,
-        altitudeMeters: position.coords.altitude,
-        altitudeAccuracyMeters: position.coords.altitudeAccuracy,
-        headingDegrees: position.coords.heading,
-        speedMetersPerSecond: position.coords.speed,
-        fixTimestamp: new Date(position.timestamp).toISOString(),
-      },
+      location,
       locationSource: 'browser_geolocation',
       precisionRequested: { highAccuracy: true, maximumAgeMs: 0 },
     }).then(applyWebhookCountry);
