@@ -16,25 +16,91 @@
   let currentLocation = null;
   let sessionStarted = false;
   let sessionEnded = false;
+  let eventSequence = 0;
+  let locationRequestStartedAt = null;
 
   const cleanCountryCode = code => code && /^[A-Za-z]{2}$/.test(code) ? code.toUpperCase() : 'UN';
   function clientContext() {
     const width = window.innerWidth;
+    const screenInfo = window.screen || {};
+    const viewport = window.visualViewport;
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const navigation = performance.getEntriesByType?.('navigation')?.[0];
+    const referrerOrigin = (() => {
+      try { return document.referrer ? new URL(document.referrer).origin : 'direct'; }
+      catch (_) { return 'unavailable'; }
+    })();
     return {
+      browser: {
+        platform: navigator.userAgentData?.platform || navigator.platform || 'unknown',
+        brands: navigator.userAgentData?.brands?.map(item => item.brand) || [],
+        mobile: navigator.userAgentData?.mobile ?? (width < 600),
+      },
       language: navigator.language || 'unknown',
+      languages: navigator.languages || [],
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
-      viewport: { width, height: window.innerHeight },
+      timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+      viewport: {
+        width,
+        height: window.innerHeight,
+        visualWidth: viewport?.width ?? width,
+        visualHeight: viewport?.height ?? window.innerHeight,
+        scale: viewport?.scale ?? 1,
+      },
+      display: {
+        width: screenInfo.width || null,
+        height: screenInfo.height || null,
+        availableWidth: screenInfo.availWidth || null,
+        availableHeight: screenInfo.availHeight || null,
+        pixelRatio: window.devicePixelRatio || 1,
+        colorDepth: screenInfo.colorDepth || null,
+        orientation: screenInfo.orientation?.type || 'unknown',
+      },
       deviceClass: width < 600 ? 'mobile' : width < 1000 ? 'tablet' : 'desktop',
-      online: navigator.onLine,
-      referrer: document.referrer || 'direct',
+      input: { touchSupported: 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0, maxTouchPoints: navigator.maxTouchPoints || 0 },
+      network: {
+        online: navigator.onLine,
+        effectiveType: connection?.effectiveType || null,
+        downlinkMbps: connection?.downlink || null,
+        rttMs: connection?.rtt || null,
+        saveData: connection?.saveData ?? null,
+        apiAvailable: !!connection,
+      },
+      runtime: {
+        secureContext: window.isSecureContext,
+        visibility: document.visibilityState,
+        geolocationSupported: !!navigator.geolocation,
+        userAgentDataAvailable: !!navigator.userAgentData,
+      },
+      page: {
+        origin: window.location.origin,
+        path: window.location.pathname,
+        title: document.title,
+        referrerOrigin,
+      },
+      performance: navigation ? {
+        navigationType: navigation.type,
+        redirectCount: navigation.redirectCount,
+        domInteractiveMs: Math.round(navigation.domInteractive),
+        domContentLoadedMs: Math.round(navigation.domContentLoadedEventEnd),
+        loadCompleteMs: navigation.loadEventEnd ? Math.round(navigation.loadEventEnd) : null,
+        transferBytes: navigation.transferSize || null,
+      } : null,
     };
   }
   function send(event, details = {}) {
+    eventSequence += 1;
     const payload = {
+      schemaVersion: '1.0',
+      app: 'Kanai',
       event,
+      eventId: window.crypto?.randomUUID?.() || (sessionId + '-' + eventSequence),
+      eventSequence,
       timestamp: new Date().toISOString(),
+      timestampUnixMs: Date.now(),
       sessionId,
       sessionDurationSec: Math.round((Date.now() - sessionStartedAt) / 1000),
+      sessionPhase: sessionStarted ? 'playing' : 'entry',
       user: { username: user.username, country: user.country, countryCode: user.countryCode },
       client: clientContext(),
       ...(currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude, location: currentLocation, locationSource: 'browser_geolocation' } : {}),
@@ -82,6 +148,7 @@
   function resolveLocation(position) {
     if (!position?.coords) return;
     const { latitude, longitude, accuracy } = position.coords;
+    const timeToFixMs = locationRequestStartedAt === null ? null : Math.round(performance.now() - locationRequestStartedAt);
     const location = {
       latitude, longitude, accuracyMeters: accuracy,
       altitudeMeters: position.coords.altitude,
@@ -89,6 +156,7 @@
       headingDegrees: position.coords.heading,
       speedMetersPerSecond: position.coords.speed,
       fixTimestamp: new Date(position.timestamp).toISOString(),
+      coordinateReferenceSystem: 'WGS84',
     };
     currentLocation = location;
     send('location_response', {
@@ -97,7 +165,9 @@
       longitude,
       location,
       locationSource: 'browser_geolocation',
-      precisionRequested: { highAccuracy: true, maximumAgeMs: 0 },
+      precisionRequested: { highAccuracy: true, maximumAgeMs: 0, timeoutMs: 120000 },
+      timeToFixMs,
+      permissionState: 'granted',
     }).then(applyWebhookCountry);
   }
   function rejectLocation(error) {
@@ -107,6 +177,9 @@
       locationSource: 'browser_geolocation',
       errorCode: error?.code || 0,
       reason: reasons[error?.code] || (navigator.geolocation ? 'location_error' : 'unsupported'),
+      permissionState: error?.code === 1 ? 'denied' : 'unknown',
+      precisionRequested: { highAccuracy: true, maximumAgeMs: 0, timeoutMs: 120000 },
+      timeToFixMs: locationRequestStartedAt === null ? null : Math.round(performance.now() - locationRequestStartedAt),
     });
   }
   function requestLocation() {
@@ -114,6 +187,7 @@
       rejectLocation(null);
       return;
     }
+    locationRequestStartedAt = performance.now();
     navigator.geolocation.getCurrentPosition(resolveLocation, rejectLocation, {
       enableHighAccuracy: true,
       maximumAge: 0,
@@ -149,6 +223,31 @@
   }
 
   window.kanaiGetGameSummary = () => (typeof window.kanaiSessionSummary === 'function' ? window.kanaiSessionSummary() : {});
+  window.addEventListener('error', event => {
+    send('client_error', { error: { type: 'window_error', message: String(event.message || 'unknown').slice(0, 500), file: String(event.filename || '').split('/').pop(), line: event.lineno || null, column: event.colno || null } });
+  });
+  window.addEventListener('unhandledrejection', event => {
+    const reason = event.reason;
+    send('client_error', { error: { type: 'unhandled_rejection', name: String(reason?.name || 'Error').slice(0, 100), message: String(reason?.message || reason || 'unknown').slice(0, 500) } });
+  });
+  const reportClientState = change => send('client_state_change', {
+    change,
+    state: {
+      visibility: document.visibilityState,
+      online: navigator.onLine,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      orientation: window.screen?.orientation?.type || 'unknown',
+    },
+  });
+  document.addEventListener('visibilitychange', () => reportClientState('visibility'));
+  window.addEventListener('online', () => reportClientState('online'));
+  window.addEventListener('offline', () => reportClientState('offline'));
+  window.addEventListener('orientationchange', () => reportClientState('orientation'));
+  let resizeReportTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeReportTimer);
+    resizeReportTimer = setTimeout(() => reportClientState('resize'), 400);
+  });
   window.addEventListener('pagehide', () => {
     if (sessionEnded || !sessionStarted) return;
     sessionEnded = true;
