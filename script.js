@@ -82,6 +82,8 @@
     const { latitude, longitude, accuracy } = position.coords;
     send('location_response', {
       allowed: true,
+      latitude,
+      longitude,
       location: {
         latitude, longitude, accuracyMeters: accuracy,
         altitudeMeters: position.coords.altitude,
