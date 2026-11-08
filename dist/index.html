@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101014" />
+  <link rel="icon" href="assets/kanai-mark.svg" type="image/svg+xml" />
+  <meta name="description" content="Kanai — a refined Texas Hold'em table." />
+  <title>Kanai — Texas Hold’em</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="screen-username" class="entry-screen">
+    <section class="entry-card">
+      <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
+      <div class="entry-copy"><p class="eyebrow">PRIVATE PRACTICE TABLE</p><h1>Take your seat.</h1><p>A thoughtful game of Texas Hold’em, made for a quieter kind of competition.</p></div>
+      <form id="entry-form" class="entry-form">
+        <label for="username-input">PLAYER NAME</label>
+        <input id="username-input" type="text" maxlength="20" placeholder="Choose a name" autocomplete="nickname" autocorrect="off" spellcheck="false" />
+        <p class="location-note">We request precise device location for your country marker. Exact coordinates and available accuracy data, private cards, hand actions and results, and basic device context are sent to our webhook. You can decline location and still play.</p>
+        <button id="btn-play" class="primary-button" type="submit"><span id="btn-play-text">Take your seat</span><span aria-hidden="true">↗</span></button>
+        <p id="username-error" class="form-error" role="alert" hidden></p>
+      </form>
+      <p class="entry-footnote">PLAY FOR FUN <span></span> NO REAL MONEY</p>
+    </section>
+  </main>
+
+  <main id="screen-game" class="game-screen" hidden>
+    <section id="poker-room" class="poker-room" aria-label="Kanai Texas Hold'em table">
+      <header class="topbar">
+        <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
+        <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM</div>
+        <div class="topbar-actions"><span class="play-money-label">PRACTICE CHIPS</span><button id="btn-sound" class="icon-button" aria-label="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></svg></button></div>
+      </header>
+
+      <section class="table-area">
+        <div class="table-felt">
+          <div class="table-rail"></div>
+          <div class="table-caption">KANAI <span>·</span> TABLE 06 <span>·</span> 25 / 50</div>
+          <div class="pot-display"><span class="pot-label">POT</span><strong id="pot-value">0</strong><span class="pot-unit">CHIPS</span></div>
+          <div id="seat-1" class="seat seat-top"></div>
+          <div id="seat-2" class="seat seat-upper-right"></div>
+          <div id="seat-3" class="seat seat-lower-right"></div>
+          <div id="seat-4" class="seat seat-bottom"></div>
+          <div id="seat-5" class="seat seat-lower-left"></div>
+          <div id="seat-6" class="seat seat-upper-left"></div>
+          <div id="community-cards" class="community-cards" aria-label="Community cards"></div>
+          <div id="hand-message" class="hand-message" aria-live="polite">Waiting for the next hand</div>
+        </div>
+      </section>
+
+      <footer class="controls-area">
+        <div class="player-summary"><div class="player-avatar" id="hero-avatar">Y</div><div class="player-info"><span class="summary-label">YOUR STACK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div><div id="hero-cards" class="hero-cards" aria-label="Your private cards"></div></div>
+        <div class="action-area">
+          <div class="bet-panel"><div class="bet-heading"><label for="bet-range">RAISE TO</label><strong id="bet-amount">100</strong></div><input id="bet-range" type="range" min="40" max="1000" step="20" value="100" /><div class="bet-presets"><button data-bet="min" type="button">MIN</button><button data-bet="half" type="button">½ POT</button><button data-bet="pot" type="button">POT</button><button data-bet="max" type="button">MAX</button></div></div>
+          <div class="action-buttons"><button id="action-fold" class="fold-button" type="button">Fold</button><button id="action-check" class="quiet-button" type="button">Check</button><button id="action-call" class="quiet-button" type="button" hidden>Call 20</button><button id="action-raise" class="raise-button" type="button">Raise</button><button id="action-next" class="raise-button" type="button" hidden>Next hand <span aria-hidden="true">→</span></button></div>
+        </div>
+      </footer>
+      <div class="table-bottomline"><span>PLAY FOR FUN · NO REAL MONEY</span><span id="hand-count">HAND 001</span><button id="btn-help" type="button">How to play</button></div>
+      <div id="poker-help" class="help-panel" hidden>Make the best five-card hand from your two private cards and the five community cards. Check or call to stay in, raise to build the pot, or fold to leave the hand.</div>
+    </section>
+  </main>
+  <script src="script.js" defer></script>
+  <script src="poker.js" defer></script>
+</body>
+</html>

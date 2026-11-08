@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="190" height="48" viewBox="0 0 190 48" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Kanai</title>
+  <defs><linearGradient id="violet" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse"><stop stop-color="#A883FF"/><stop offset="1" stop-color="#7546DC"/></linearGradient></defs>
+  <rect x="4" y="4" width="40" height="40" rx="12" fill="url(#violet)"/>
+  <path d="M16 14v20m0-10 14-10M16 24l15 10" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M56 15h3.1l1.2 2.4 1.2-2.4h3.1l-2.8 4.5 3 4.5h-3.2l-1.3-2.4-1.3 2.4h-3.2l3-4.5-2.8-4.5Z" fill="#B397FF"/>
+  <text x="74" y="34" fill="#F7F5FC" font-family="Manrope,Arial,sans-serif" font-size="22" font-weight="800" letter-spacing="4">KANAI</text>
+</svg>

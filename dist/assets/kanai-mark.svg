@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Kanai</title>
+  <defs><linearGradient id="violet" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse"><stop stop-color="#A883FF"/><stop offset="1" stop-color="#7546DC"/></linearGradient></defs>
+  <rect x="2" y="2" width="44" height="44" rx="13" fill="url(#violet)"/>
+  <path d="M16 13v22m0-11 16-11M16 24l16 11" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

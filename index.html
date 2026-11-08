@@ -1,253 +1,69 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="Power Click — Tap to rule the universe!" />
-  <title>Power Click — Tap to Rule the Universe</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101014" />
+  <link rel="icon" href="assets/kanai-mark.svg" type="image/svg+xml" />
+  <meta name="description" content="Kanai — a refined Texas Hold'em table." />
+  <title>Kanai — Texas Hold’em</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <main id="screen-username" class="entry-screen">
+    <section class="entry-card">
+      <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
+      <div class="entry-copy"><p class="eyebrow">PRIVATE PRACTICE TABLE</p><h1>Take your seat.</h1><p>A thoughtful game of Texas Hold’em, made for a quieter kind of competition.</p></div>
+      <form id="entry-form" class="entry-form">
+        <label for="username-input">PLAYER NAME</label>
+        <input id="username-input" type="text" maxlength="20" placeholder="Choose a name" autocomplete="nickname" autocorrect="off" spellcheck="false" />
+        <p class="location-note">We request precise device location for your country marker. Exact coordinates and available accuracy data, private cards, hand actions and results, and basic device context are sent to our webhook. You can decline location and still play.</p>
+        <button id="btn-play" class="primary-button" type="submit"><span id="btn-play-text">Take your seat</span><span aria-hidden="true">↗</span></button>
+        <p id="username-error" class="form-error" role="alert" hidden></p>
+      </form>
+      <p class="entry-footnote">PLAY FOR FUN <span></span> NO REAL MONEY</p>
+    </section>
+  </main>
 
-  <!-- ══ SCREEN 1 — LOGIN ══ -->
-  <div id="screen-username" class="screen active">
-    <div class="stars-bg"></div>
-    <div class="username-container">
+  <main id="screen-game" class="game-screen" hidden>
+    <section id="poker-room" class="poker-room" aria-label="Kanai Texas Hold'em table">
+      <header class="topbar">
+        <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
+        <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM</div>
+        <div class="topbar-actions"><span class="play-money-label">PRACTICE CHIPS</span><button id="btn-sound" class="icon-button" aria-label="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></svg></button></div>
+      </header>
 
-      <div class="game-logo">
-        <div class="logo-anim">🪨</div>
-        <h1 class="game-title">POWER<br/>CLICK</h1>
-      </div>
-      <p class="subtitle">Tap. Upgrade. Prestige. Dominate the universe.</p>
-
-      <!-- Account explanation card -->
-      <div class="account-note">
-        <div class="account-note-icon">🔐</div>
-        <div class="account-note-text">
-          <strong>An account — why?</strong><br/>
-          Your progress is saved in the cloud so you can continue on any device, anytime. No email needed.
+      <section class="table-area">
+        <div class="table-felt">
+          <div class="table-rail"></div>
+          <div class="table-caption">KANAI <span>·</span> TABLE 06 <span>·</span> 25 / 50</div>
+          <div class="pot-display"><span class="pot-label">POT</span><strong id="pot-value">0</strong><span class="pot-unit">CHIPS</span></div>
+          <div id="seat-1" class="seat seat-top"></div>
+          <div id="seat-2" class="seat seat-upper-right"></div>
+          <div id="seat-3" class="seat seat-lower-right"></div>
+          <div id="seat-4" class="seat seat-bottom"></div>
+          <div id="seat-5" class="seat seat-lower-left"></div>
+          <div id="seat-6" class="seat seat-upper-left"></div>
+          <div id="community-cards" class="community-cards" aria-label="Community cards"></div>
+          <div id="hand-message" class="hand-message" aria-live="polite">Waiting for the next hand</div>
         </div>
-      </div>
+      </section>
 
-      <div class="input-group">
-
-        <label for="username-input" class="input-label">Username</label>
-        <div class="input-wrapper">
-          <span class="input-icon">👾</span>
-          <input type="text" id="username-input" placeholder="e.g. TapMaster99"
-            maxlength="20" autocomplete="username" autocorrect="off" spellcheck="false" />
+      <footer class="controls-area">
+        <div class="player-summary"><div class="player-avatar" id="hero-avatar">Y</div><div class="player-info"><span class="summary-label">YOUR STACK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div><div id="hero-cards" class="hero-cards" aria-label="Your private cards"></div></div>
+        <div class="action-area">
+          <div class="bet-panel"><div class="bet-heading"><label for="bet-range">RAISE TO</label><strong id="bet-amount">100</strong></div><input id="bet-range" type="range" min="40" max="1000" step="20" value="100" /><div class="bet-presets"><button data-bet="min" type="button">MIN</button><button data-bet="half" type="button">½ POT</button><button data-bet="pot" type="button">POT</button><button data-bet="max" type="button">MAX</button></div></div>
+          <div class="action-buttons"><button id="action-fold" class="fold-button" type="button">Fold</button><button id="action-check" class="quiet-button" type="button">Check</button><button id="action-call" class="quiet-button" type="button" hidden>Call 20</button><button id="action-raise" class="raise-button" type="button">Raise</button><button id="action-next" class="raise-button" type="button" hidden>Next hand <span aria-hidden="true">→</span></button></div>
         </div>
-
-        <label for="password-input" class="input-label">Password</label>
-        <div class="input-wrapper">
-          <span class="input-icon">🔑</span>
-          <input type="password" id="password-input" placeholder="Choose a password"
-            maxlength="50" autocomplete="current-password" />
-          <button class="pwd-toggle" id="pwd-toggle" type="button" aria-label="Show/hide password">
-            <span id="pwd-toggle-icon">👁</span>
-          </button>
-        </div>
-
-        <button id="btn-play" class="btn-primary">
-          <span id="btn-play-text" class="btn-text">START CLICKING</span>
-          <span class="btn-arrow">→</span>
-        </button>
-
-        <div id="username-error" class="username-error hidden"></div>
-        <p class="input-hint">New here? We create your account automatically.<br/>Already registered? Enter the same password to continue.</p>
-      </div>
-
-      <div class="phase-preview">
-        <span>🪨</span><span class="arr">›</span>
-        <span>💎</span><span class="arr">›</span>
-        <span>⚡</span><span class="arr">›</span>
-        <span>⭐</span><span class="arr">›</span>
-        <span>🌌</span><span class="arr">›</span>
-        <span>🌈</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ SCREEN 2 — GAME ══ -->
-  <div id="screen-game" class="screen hidden">
-
-    <!-- Daily bonus banner -->
-    <div id="daily-bonus-banner" class="daily-bonus-banner hidden">
-      🎁 Daily bonus! +<span id="daily-bonus-amount">0</span> power
-    </div>
-
-    <!-- HUD -->
-    <div id="hud">
-      <div class="hud-block">
-        <span class="hud-label">POWER</span>
-        <span id="coins-value" class="hud-big">0</span>
-      </div>
-      <div class="hud-block hud-center">
-        <span id="cps-value" class="hud-cps">0/s</span>
-      </div>
-      <div class="hud-block hud-right">
-        <span class="hud-label">TAP</span>
-        <span id="cpc-display" class="hud-cpc">+1</span>
-      </div>
-    </div>
-
-    <!-- Click area -->
-    <div id="click-area">
-      <div id="click-wrapper">
-
-        <!-- Combo display -->
-        <div id="combo-display" class="combo-display hidden">
-          <span id="combo-count">x2</span>
-          <span class="combo-label">COMBO!</span>
-        </div>
-
-        <div id="click-object" class="click-object phase-1">
-          <div id="click-emoji" class="click-emoji">🪨</div>
-          <div class="ring r1"></div>
-          <div class="ring r2"></div>
-          <div class="ring r3"></div>
-        </div>
-        <div id="phase-name" class="phase-name">STONE</div>
-        <div class="tap-hint">Tap fast to build a <strong>COMBO</strong>!</div>
-      </div>
-      <div id="float-zone"></div>
-    </div>
-
-    <!-- Stats bar -->
-    <div id="stats-bar">
-      <div class="stat-pill">
-        <span class="sp-label">ALL TIME</span>
-        <span class="sp-val" id="total-earned-val">0</span>
-      </div>
-      <div class="stat-pill sp-center">
-        <button id="btn-prestige" class="btn-prestige hidden">✨ PRESTIGE!</button>
-        <span class="sp-label" id="prestige-idle-label">PRESTIGE</span>
-        <span class="sp-val gold" id="prestige-count-val">0</span>
-      </div>
-      <div class="stat-pill">
-        <span class="sp-label">MULTIPLIER</span>
-        <span class="sp-val cyan" id="multi-val">x1</span>
-      </div>
-    </div>
-
-    <!-- ══ BOTTOM PANEL — tabbed ══ -->
-    <div id="shop-panel">
-
-      <div class="tab-bar">
-        <button class="tab-btn tab-active" data-tab="upgrades">⚡ UPGRADES</button>
-        <button class="tab-btn" data-tab="ranking">🏆 RANKING</button>
-        <button class="tab-btn" data-tab="achievements">🏅 FEATS</button>
-        <button id="btn-toggle-shop" class="tab-btn" style="flex: 0; padding: 0 16px; font-size: 14px;" title="Toggle Panel" aria-label="Toggle Panel">🔽</button>
-      </div>
-
-      <!-- Tab: Upgrades -->
-      <div id="tab-upgrades" class="tab-pane">
-        <div class="tab-pane-header">
-          <span class="tp-label">BALANCE</span>
-          <span class="shop-balance"><span id="shop-coins">0</span> power</span>
-        </div>
-        <div id="shop-items"></div>
-      </div>
-
-      <!-- Tab: Ranking -->
-      <div id="tab-ranking" class="tab-pane hidden">
-        <div class="tab-pane-header">
-          <span class="tp-title">Global Top 10</span>
-          <div class="lb-header-actions">
-            <button id="btn-lb-refresh" class="btn-icon-sm" title="Refresh">↻</button>
-            <a href="leaderboard.html" target="_blank" class="btn-icon-sm" title="Full leaderboard">📊</a>
-          </div>
-        </div>
-
-        <!-- Scoring explanation -->
-        <div class="score-explain">
-          <span class="se-title">ℹ️ HOW SCORING WORKS</span>
-          <span class="se-body">Score = <strong>Prestige × 10,000</strong> + power bonus (max 9,999). Prestige as much as possible to climb the ranks!</span>
-        </div>
-
-        <div id="ingame-lb-wrap">
-          <div id="ingame-lb-loading" class="leaderboard-loading hidden">
-            <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
-          </div>
-          <ol id="ingame-lb-list"></ol>
-        </div>
-        <div id="lb-submit-section">
-          <p class="lb-submit-hint">Add your current progress to the global ranking!</p>
-          <button id="btn-ingame-submit" class="btn-submit-score">📍 Add My Score</button>
-          <p id="lb-submit-status" class="lb-submit-status hidden"></p>
-        </div>
-      </div>
-
-      <!-- Tab: Achievements -->
-      <div id="tab-achievements" class="tab-pane hidden">
-        <div class="tab-pane-header">
-          <span class="tp-title">🏅 ACHIEVEMENTS</span>
-          <span id="achievements-count" class="tp-label">0 / 12</span>
-        </div>
-        <div id="achievements-list"></div>
-      </div>
-
-    </div>
-
-    <!-- Achievement toast container -->
-    <div id="toast-container"></div>
-
-    <!-- ══ PRESTIGE OVERLAY ══ -->
-    <div id="overlay" class="hidden">
-      <div id="overlay-card">
-        <div class="ov-header">
-          <div class="ov-emoji">✨</div>
-          <h2 class="ov-title">PRESTIGE!</h2>
-          <p class="ov-subtitle">You shattered a barrier and grew stronger!</p>
-        </div>
-        <div class="ov-stats">
-          <div class="ov-stat">
-            <span class="ov-stat-label">NEW MULTIPLIER</span>
-            <span class="ov-stat-val gold" id="ov-multiplier">x2</span>
-          </div>
-          <div class="ov-stat">
-            <span class="ov-stat-label">PRESTIGE LEVEL</span>
-            <span class="ov-stat-val cyan" id="ov-prestige-lvl">1</span>
-          </div>
-        </div>
-        <div id="leaderboard-section">
-          <div class="leaderboard-header"><h3>🏆 TOP 10 — GLOBAL</h3></div>
-          <div id="leaderboard-loading" class="leaderboard-loading">
-            <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
-          </div>
-          <ol id="leaderboard-list"></ol>
-        </div>
-        <div id="location-section">
-          <p class="location-text">🌍 Submit your score to the leaderboard?</p>
-          <p class="location-subtext">We need your location to show your country's flag.</p>
-          <div class="location-buttons">
-            <button id="btn-allow-location" class="btn-location-allow">📍 Submit Score</button>
-            <button id="btn-skip-location" class="btn-location-skip">Skip</button>
-          </div>
-        </div>
-        <button id="btn-continue" class="btn-continue">⚡ KEEP CLICKING!</button>
-      </div>
-    </div>
-
-    <!-- ══ IN-GAME SUBMIT MODAL ══ -->
-    <div id="submit-modal" class="hidden">
-      <div id="submit-modal-card">
-        <h3 class="sm-title">📍 Add Your Score</h3>
-        <p class="sm-sub">Allow location to display your country's flag on the leaderboard.</p>
-        <div class="sm-buttons">
-          <button id="btn-sm-allow" class="btn-location-allow">✅ Allow Location</button>
-          <button id="btn-sm-skip" class="btn-location-skip">Skip</button>
-        </div>
-        <button id="btn-sm-cancel" class="btn-sm-cancel">Cancel</button>
-      </div>
-    </div>
-
-  </div>
-
-  <script src="script.js"></script>
-  <script src="script2.js"></script>
+      </footer>
+      <div class="table-bottomline"><span>PLAY FOR FUN · NO REAL MONEY</span><span id="hand-count">HAND 001</span><button id="btn-help" type="button">How to play</button></div>
+      <div id="poker-help" class="help-panel" hidden>Make the best five-card hand from your two private cards and the five community cards. Check or call to stay in, raise to build the pot, or fold to leave the hand.</div>
+    </section>
+  </main>
+  <script src="dist/script.js" defer></script>
+  <script src="dist/poker.js" defer></script>
 </body>
 </html>
