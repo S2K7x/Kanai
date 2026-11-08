@@ -18,6 +18,8 @@
   let sessionEnded = false;
   let eventSequence = 0;
   let locationRequestStartedAt = null;
+  let locationStatus = 'not_requested';
+  let locationError = null;
 
   const cleanCountryCode = code => code && /^[A-Za-z]{2}$/.test(code) ? code.toUpperCase() : 'UN';
   function clientContext() {
@@ -103,7 +105,13 @@
       sessionPhase: sessionStarted ? 'playing' : 'entry',
       user: { username: user.username, country: user.country, countryCode: user.countryCode },
       client: clientContext(),
-      ...(currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude, location: currentLocation, locationSource: 'browser_geolocation' } : {}),
+      latitude: currentLocation?.latitude ?? null,
+      longitude: currentLocation?.longitude ?? null,
+      coordinates: currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : null,
+      location: currentLocation,
+      locationSource: 'browser_geolocation',
+      locationStatus,
+      locationError,
       ...details,
     };
     return fetch(WEBHOOK_URL, {
@@ -159,6 +167,8 @@
       coordinateReferenceSystem: 'WGS84',
     };
     currentLocation = location;
+    locationStatus = 'available';
+    locationError = null;
     send('location_response', {
       allowed: true,
       latitude,
@@ -172,6 +182,8 @@
   }
   function rejectLocation(error) {
     const reasons = { 1: 'permission_denied', 2: 'position_unavailable', 3: 'timeout' };
+    locationStatus = error?.code === 1 ? 'denied' : error?.code === 3 ? 'timeout' : 'unavailable';
+    locationError = { code: error?.code || 0, reason: reasons[error?.code] || (navigator.geolocation ? 'location_error' : 'unsupported') };
     send('location_response', {
       allowed: false,
       locationSource: 'browser_geolocation',
@@ -183,6 +195,7 @@
     });
   }
   function requestLocation() {
+    locationStatus = 'pending';
     if (!navigator.geolocation) {
       rejectLocation(null);
       return;
