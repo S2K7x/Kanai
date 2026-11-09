@@ -5,45 +5,94 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0c0a14" />
   <link rel="icon" href="assets/kanai-mark.svg" type="image/svg+xml" />
-  <meta name="description" content="Kanai — a refined Texas Hold'em table." />
-  <title>Kanai — Texas Hold’em</title>
+  <link rel="apple-touch-icon" href="assets/kanai-touch.png" />
+  <meta name="description" content="Kanai Poker — free No-Limit Texas Hold'em against five sharp opponents. Play money only." />
+  <title>Kanai Poker — Texas Hold’em</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main id="screen-username" class="entry-screen">
-    <section class="entry-card">
-      <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
-      <div class="entry-copy"><p class="eyebrow">PRIVATE PRACTICE TABLE</p><h1>Take your seat.</h1><p>A thoughtful game of Texas Hold’em, made for a quieter kind of competition.</p></div>
-      <form id="entry-form" class="entry-form">
-        <label for="username-input">PLAYER NAME</label>
-        <input id="username-input" type="text" maxlength="20" placeholder="Choose a name" autocomplete="nickname" autocorrect="off" spellcheck="false" />
-        <button id="btn-play" class="primary-button" type="submit"><span id="btn-play-text">Take your seat</span><span aria-hidden="true">↗</span></button>
-        <p id="username-error" class="form-error" role="alert" hidden></p>
-      </form>
-      <p class="entry-footnote">PLAY FOR FUN <span></span> NO REAL MONEY</p>
+    <div class="entry-bg" aria-hidden="true">
+      <span class="bg-suit s1">♠</span><span class="bg-suit s2">♥</span><span class="bg-suit s3">♣</span><span class="bg-suit s4">♦</span>
+    </div>
+    <section class="entry-shell">
+      <div class="entry-card">
+        <a class="brand" href="#" aria-label="Kanai Poker home"><img class="brand-mark" src="assets/kanai-mark.svg" alt="" width="40" height="40" /><span class="brand-name">KANAI<small>POKER</small></span></a>
+        <div class="entry-copy">
+          <p class="eyebrow"><span class="live-dot"></span> NO-LIMIT HOLD’EM · 6-MAX</p>
+          <h1>Take your <span class="grad">seat.</span></h1>
+          <p>Real betting rounds against five opponents who each play their own way. Free chips, no real money — just the game.</p>
+        </div>
+
+        <div id="returning" class="returning" hidden>
+          <div class="returning-avatar" id="returning-avatar">A</div>
+          <div class="returning-info"><strong id="returning-name">Welcome back</strong><span id="returning-meta">Lv 1 · 1,000 chips</span></div>
+          <span id="returning-bonus" class="bonus-pill" hidden>🎁 Daily bonus</span>
+        </div>
+
+        <form id="entry-form" class="entry-form">
+          <label for="username-input">PLAYER NAME</label>
+          <div class="name-field">
+            <input id="username-input" type="text" maxlength="20" placeholder="Choose a name" autocomplete="nickname" autocorrect="off" spellcheck="false" />
+            <button type="button" id="btn-random-name" class="dice-button" aria-label="Pick a random name" title="Random name">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3"/><circle cx="15.5" cy="15.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="15.5" cy="8.5" r="1.3"/><circle cx="8.5" cy="15.5" r="1.3"/></svg>
+            </button>
+          </div>
+          <button id="btn-play" class="primary-button" type="submit"><span id="btn-play-text">Play now</span><span class="cta-arrow" aria-hidden="true">→</span></button>
+          <p id="username-error" class="form-error" role="alert" hidden></p>
+        </form>
+
+        <ul class="feature-list">
+          <li><span class="fi">♠</span><div><b>Real poker</b><small>Blinds, side pots, showdowns</small></div></li>
+          <li><span class="fi">★</span><div><b>Level up</b><small>XP, achievements, daily bonus</small></div></li>
+          <li><span class="fi">⚡</span><div><b>Fast play</b><small>Keys F · C · R, auto-deal</small></div></li>
+        </ul>
+        <p class="entry-footnote">PLAY FOR FUN <span></span> NO REAL MONEY</p>
+      </div>
+
+      <div class="entry-visual" aria-hidden="true">
+        <div class="showcase">
+          <div class="showcase-glow"></div>
+          <div class="showcase-pot"><span>POT</span><b>12,500</b></div>
+          <div class="showcase-cards">
+            <div class="playing-card sc c1"><span class="card-rank">10<span class="card-suit">♠</span></span><span class="card-center">♠</span></div>
+            <div class="playing-card sc c2"><span class="card-rank">J<span class="card-suit">♠</span></span><span class="card-center">♠</span></div>
+            <div class="playing-card sc c3"><span class="card-rank">Q<span class="card-suit">♠</span></span><span class="card-center">♠</span></div>
+            <div class="playing-card sc c4"><span class="card-rank">K<span class="card-suit">♠</span></span><span class="card-center">♠</span></div>
+            <div class="playing-card sc c5"><span class="card-rank">A<span class="card-suit">♠</span></span><span class="card-center">♠</span></div>
+          </div>
+          <div class="showcase-hand">ROYAL FLUSH</div>
+          <div class="chip-pile p1"><i></i><i></i><i></i><i></i></div>
+          <div class="chip-pile p2"><i></i><i></i><i></i></div>
+          <div class="chip-pile p3"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="showcase-seat ss1"><span style="background:linear-gradient(145deg,#ff9f6b,#e5533d)">M</span><em>CALLED</em></div>
+          <div class="showcase-seat ss2"><span style="background:linear-gradient(145deg,#5bd1ff,#3a74e5)">E</span><em class="fold">FOLDED</em></div>
+        </div>
+      </div>
     </section>
   </main>
 
   <main id="screen-game" class="game-screen" hidden>
     <section id="poker-room" class="poker-room" aria-label="Kanai Texas Hold'em table">
       <header class="topbar">
-        <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
+        <a class="brand brand-small" href="#" aria-label="Kanai Poker"><img class="brand-mark" src="assets/kanai-mark.svg" alt="" width="32" height="32" /><span class="brand-name">KANAI<small>POKER</small></span></a>
         <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM <i></i> 25 / 50</div>
         <div class="topbar-actions">
+          <button id="btn-profile" class="level-chip" type="button" aria-label="Open your profile"><span class="level-num" id="level-num">Lv 1</span><span class="xp-bar"><i id="xp-fill"></i></span></button>
           <div class="chip-balance" aria-label="Your chip balance"><span class="chip-ico" aria-hidden="true"></span><strong id="topbar-stack">1,000</strong></div>
           <button id="btn-sound" class="icon-button" aria-label="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></svg></button>
         </div>
       </header>
 
       <section class="table-area">
-        <div class="table-felt">
+        <div class="table-felt" id="table-felt">
           <div class="felt-glow" aria-hidden="true"></div>
           <div class="table-rail" aria-hidden="true"></div>
           <div class="table-caption">KANAI <span>·</span> TABLE 06 <span>·</span> NO-LIMIT</div>
-          <div class="pot-display"><span class="pot-label"><span class="chip-ico" aria-hidden="true"></span> POT</span><strong id="pot-value">0</strong></div>
+          <div class="pot-display" id="pot-display"><span class="pot-label"><span class="chip-ico" aria-hidden="true"></span> POT</span><strong id="pot-value">0</strong><span class="side-pots" id="side-pots"></span></div>
           <div id="seat-1" class="seat seat-top"></div>
           <div id="seat-2" class="seat seat-upper-right"></div>
           <div id="seat-3" class="seat seat-lower-right"></div>
@@ -51,6 +100,7 @@
           <div id="seat-5" class="seat seat-lower-left"></div>
           <div id="seat-6" class="seat seat-upper-left"></div>
           <div id="community-cards" class="community-cards" aria-label="Community cards"></div>
+          <div id="hero-hand" class="hero-hand" aria-live="polite" hidden></div>
           <div id="hero-cards" class="hero-cards" aria-label="Your private cards"></div>
           <div id="hand-message" class="hand-message" aria-live="polite">Waiting for the next hand</div>
           <div id="winner-banner" class="winner-banner" aria-live="polite" hidden></div>
@@ -64,35 +114,55 @@
         </div>
         <div class="action-area">
           <div class="bet-panel" id="bet-panel">
-            <div class="bet-heading"><label for="bet-range">RAISE TO</label><strong id="bet-amount">100</strong></div>
+            <div class="bet-heading"><label for="bet-range" id="bet-label">RAISE TO</label><strong id="bet-amount">100</strong></div>
             <input id="bet-range" type="range" min="100" max="1000" step="10" value="100" aria-label="Raise amount" />
             <div class="bet-presets"><button data-bet="min" type="button">MIN</button><button data-bet="half" type="button">½ POT</button><button data-bet="pot" type="button">POT</button><button data-bet="max" type="button">ALL-IN</button></div>
           </div>
           <div class="action-buttons">
             <button id="action-fold" class="fold-button" type="button">Fold<kbd>F</kbd></button>
             <button id="action-check" class="quiet-button" type="button">Check<kbd>C</kbd></button>
-            <button id="action-call" class="call-button" type="button" hidden>Call<span class="btn-amt" id="call-amt">50</span><kbd>C</kbd></button>
-            <button id="action-raise" class="raise-button" type="button">Raise<kbd>R</kbd></button>
-            <button id="action-next" class="raise-button next-button" type="button" hidden>Deal next hand <span aria-hidden="true">→</span></button>
+            <button id="action-call" class="call-button" type="button" hidden>Call <span class="btn-amt" id="call-amt">50</span><kbd>C</kbd></button>
+            <button id="action-raise" class="raise-button" type="button"><span id="raise-label">Raise</span><kbd>R</kbd></button>
+            <button id="action-next" class="raise-button next-button" type="button" hidden>Next hand <span id="next-count" class="next-count"></span><span aria-hidden="true">→</span></button>
           </div>
         </div>
         <div class="turn-indicator" id="turn-indicator" hidden>
-          <div class="turn-ring" id="turn-ring" style="--t:1"><span id="turn-timer">0:30</span></div>
+          <div class="turn-ring" id="turn-ring"><span id="turn-timer">0:30</span></div>
           <span class="turn-label">YOUR TURN</span>
         </div>
       </footer>
-      <div class="table-bottomline"><span>PLAY FOR FUN · NO REAL MONEY</span><span id="hand-count">HAND #001</span><button id="btn-help" type="button">How to play</button></div>
+      <div class="table-bottomline">
+        <span>PLAY FOR FUN · NO REAL MONEY</span>
+        <span id="hand-count">HAND #001</span>
+        <span class="bottom-actions"><label class="auto-toggle"><input type="checkbox" id="auto-deal" checked /> <span>Auto-deal</span></label><button id="btn-help" type="button">How to play</button></span>
+      </div>
+
       <div id="poker-help" class="help-panel" hidden>
         <strong>How to play</strong>
         <p>Build the best five-card hand from your two private cards and the five shared cards on the table.</p>
         <ul>
           <li><b>Check</b> — stay in for free when there’s no bet to match.</li>
           <li><b>Call</b> — match the current bet to keep playing.</li>
-          <li><b>Raise</b> — increase the bet using the slider and pressure your opponents.</li>
+          <li><b>Raise</b> — increase the bet with the slider to pressure opponents.</li>
           <li><b>Fold</b> — give up the hand and lose nothing more.</li>
         </ul>
-        <p class="help-keys">Shortcuts: <kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise</p>
+        <p class="help-ranks">Hands, best to worst: Royal flush · Straight flush · Four of a kind · Full house · Flush · Straight · Three of a kind · Two pair · Pair · High card.</p>
+        <p class="help-keys">Keys: <kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise · <kbd>←</kbd><kbd>→</kbd> size · <kbd>Enter</kbd> next hand</p>
       </div>
+
+      <div id="profile-panel" class="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-title" hidden>
+        <div class="profile-card">
+          <button class="profile-close" id="profile-close" type="button" aria-label="Close profile">×</button>
+          <div class="profile-head"><div class="player-avatar" id="profile-avatar">Y</div><div><strong id="profile-title">Player</strong><span id="profile-level">Level 1</span></div></div>
+          <div class="profile-xp"><span class="xp-bar big"><i id="profile-xp-fill"></i></span><small id="profile-xp-text">0 / 100 XP</small></div>
+          <div class="profile-stats" id="profile-stats"></div>
+          <h3>Achievements <small id="ach-count">0 / 0</small></h3>
+          <div class="achievement-grid" id="achievement-grid"></div>
+        </div>
+      </div>
+
+      <div id="toasts" class="toasts" aria-live="polite"></div>
+      <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
     </section>
   </main>
   <script src="dist/script.js" defer></script>
