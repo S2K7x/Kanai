@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#101014" />
+  <meta name="theme-color" content="#0c0a14" />
   <link rel="icon" href="assets/kanai-mark.svg" type="image/svg+xml" />
   <meta name="description" content="Kanai — a refined Texas Hold'em table." />
   <title>Kanai — Texas Hold’em</title>
@@ -31,15 +31,19 @@
     <section id="poker-room" class="poker-room" aria-label="Kanai Texas Hold'em table">
       <header class="topbar">
         <a class="wordmark" href="#" aria-label="Kanai home"><img class="wordmark-logo" src="assets/kanai-logo.svg" alt="Kanai" /></a>
-        <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM</div>
-        <div class="topbar-actions"><span class="play-money-label">PRACTICE CHIPS</span><button id="btn-sound" class="icon-button" aria-label="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></svg></button></div>
+        <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM <i></i> 25 / 50</div>
+        <div class="topbar-actions">
+          <div class="chip-balance" aria-label="Your chip balance"><span class="chip-ico" aria-hidden="true"></span><strong id="topbar-stack">1,000</strong></div>
+          <button id="btn-sound" class="icon-button" aria-label="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></svg></button>
+        </div>
       </header>
 
       <section class="table-area">
         <div class="table-felt">
-          <div class="table-rail"></div>
-          <div class="table-caption">KANAI <span>·</span> TABLE 06 <span>·</span> 25 / 50</div>
-          <div class="pot-display"><span class="pot-label">POT</span><strong id="pot-value">0</strong><span class="pot-unit">CHIPS</span></div>
+          <div class="felt-glow" aria-hidden="true"></div>
+          <div class="table-rail" aria-hidden="true"></div>
+          <div class="table-caption">KANAI <span>·</span> TABLE 06 <span>·</span> NO-LIMIT</div>
+          <div class="pot-display"><span class="pot-label"><span class="chip-ico" aria-hidden="true"></span> POT</span><strong id="pot-value">0</strong></div>
           <div id="seat-1" class="seat seat-top"></div>
           <div id="seat-2" class="seat seat-upper-right"></div>
           <div id="seat-3" class="seat seat-lower-right"></div>
@@ -47,19 +51,48 @@
           <div id="seat-5" class="seat seat-lower-left"></div>
           <div id="seat-6" class="seat seat-upper-left"></div>
           <div id="community-cards" class="community-cards" aria-label="Community cards"></div>
+          <div id="hero-cards" class="hero-cards" aria-label="Your private cards"></div>
           <div id="hand-message" class="hand-message" aria-live="polite">Waiting for the next hand</div>
+          <div id="winner-banner" class="winner-banner" aria-live="polite" hidden></div>
         </div>
       </section>
 
       <footer class="controls-area">
-        <div class="player-summary"><div class="player-avatar" id="hero-avatar">Y</div><div class="player-info"><span class="summary-label">YOUR STACK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div><div id="hero-cards" class="hero-cards" aria-label="Your private cards"></div></div>
+        <div class="player-summary">
+          <div class="player-avatar" id="hero-avatar">Y</div>
+          <div class="player-info"><span class="summary-label">YOUR BANK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div>
+        </div>
         <div class="action-area">
-          <div class="bet-panel"><div class="bet-heading"><label for="bet-range">RAISE TO</label><strong id="bet-amount">100</strong></div><input id="bet-range" type="range" min="40" max="1000" step="20" value="100" /><div class="bet-presets"><button data-bet="min" type="button">MIN</button><button data-bet="half" type="button">½ POT</button><button data-bet="pot" type="button">POT</button><button data-bet="max" type="button">MAX</button></div></div>
-          <div class="action-buttons"><button id="action-fold" class="fold-button" type="button">Fold</button><button id="action-check" class="quiet-button" type="button">Check</button><button id="action-call" class="quiet-button" type="button" hidden>Call 20</button><button id="action-raise" class="raise-button" type="button">Raise</button><button id="action-next" class="raise-button" type="button" hidden>Next hand <span aria-hidden="true">→</span></button></div>
+          <div class="bet-panel" id="bet-panel">
+            <div class="bet-heading"><label for="bet-range">RAISE TO</label><strong id="bet-amount">100</strong></div>
+            <input id="bet-range" type="range" min="100" max="1000" step="10" value="100" aria-label="Raise amount" />
+            <div class="bet-presets"><button data-bet="min" type="button">MIN</button><button data-bet="half" type="button">½ POT</button><button data-bet="pot" type="button">POT</button><button data-bet="max" type="button">ALL-IN</button></div>
+          </div>
+          <div class="action-buttons">
+            <button id="action-fold" class="fold-button" type="button">Fold<kbd>F</kbd></button>
+            <button id="action-check" class="quiet-button" type="button">Check<kbd>C</kbd></button>
+            <button id="action-call" class="call-button" type="button" hidden>Call<span class="btn-amt" id="call-amt">50</span><kbd>C</kbd></button>
+            <button id="action-raise" class="raise-button" type="button">Raise<kbd>R</kbd></button>
+            <button id="action-next" class="raise-button next-button" type="button" hidden>Deal next hand <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+        <div class="turn-indicator" id="turn-indicator" hidden>
+          <div class="turn-ring" id="turn-ring" style="--t:1"><span id="turn-timer">0:30</span></div>
+          <span class="turn-label">YOUR TURN</span>
         </div>
       </footer>
-      <div class="table-bottomline"><span>PLAY FOR FUN · NO REAL MONEY</span><span id="hand-count">HAND 001</span><button id="btn-help" type="button">How to play</button></div>
-      <div id="poker-help" class="help-panel" hidden>Make the best five-card hand from your two private cards and the five community cards. Check or call to stay in, raise to build the pot, or fold to leave the hand.</div>
+      <div class="table-bottomline"><span>PLAY FOR FUN · NO REAL MONEY</span><span id="hand-count">HAND #001</span><button id="btn-help" type="button">How to play</button></div>
+      <div id="poker-help" class="help-panel" hidden>
+        <strong>How to play</strong>
+        <p>Build the best five-card hand from your two private cards and the five shared cards on the table.</p>
+        <ul>
+          <li><b>Check</b> — stay in for free when there’s no bet to match.</li>
+          <li><b>Call</b> — match the current bet to keep playing.</li>
+          <li><b>Raise</b> — increase the bet using the slider and pressure your opponents.</li>
+          <li><b>Fold</b> — give up the hand and lose nothing more.</li>
+        </ul>
+        <p class="help-keys">Shortcuts: <kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise</p>
+      </div>
     </section>
   </main>
   <script src="dist/script.js" defer></script>
