@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#0c0a14" />
   <link rel="icon" href="assets/kanai-mark.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/kanai-touch.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="Kanai Poker — free No-Limit Texas Hold'em against five sharp opponents. Play money only." />
   <title>Kanai Poker — Texas Hold’em</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -22,9 +25,9 @@
       <div class="entry-card">
         <a class="brand" href="#" aria-label="Kanai Poker home"><img class="brand-mark" src="assets/kanai-mark.svg" alt="" width="40" height="40" /><span class="brand-name">KANAI<small>POKER</small></span></a>
         <div class="entry-copy">
-          <p class="eyebrow"><span class="live-dot"></span> NO-LIMIT HOLD’EM · 6-MAX</p>
+          <p class="eyebrow"><span class="live-dot"></span> NO-LIMIT HOLD’EM · 6-MAX & HEADS-UP</p>
           <h1>Take your <span class="grad">seat.</span></h1>
-          <p>Real betting rounds against five opponents who each play their own way. Free chips, no real money — just the game.</p>
+          <p>Real betting rounds against opponents who each play their own way — a full table or a one-on-one duel. Free chips, no real money.</p>
         </div>
 
         <div id="returning" class="returning" hidden>
@@ -41,6 +44,21 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3"/><circle cx="15.5" cy="15.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="15.5" cy="8.5" r="1.3"/><circle cx="8.5" cy="15.5" r="1.3"/></svg>
             </button>
           </div>
+          <span class="field-label">TABLE</span>
+          <div class="mode-picker" role="radiogroup" aria-label="Table type">
+            <button type="button" class="mode-card" data-mode="solo" role="radio" aria-checked="true">
+              <span class="mode-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              <b>6-Max table</b><small>You vs 5 opponents</small>
+            </button>
+            <button type="button" class="mode-card" data-mode="headsup" role="radio" aria-checked="false">
+              <span class="mode-icon duel" aria-hidden="true"><i></i><i></i></span>
+              <b>Heads-up 1v1</b><small>One opponent, every hand counts</small>
+            </button>
+          </div>
+          <div id="hu-options" class="hu-options" hidden>
+            <span class="field-label">CHOOSE YOUR OPPONENT</span>
+            <div id="opponent-picker" class="opponent-picker" role="radiogroup" aria-label="Opponent"></div>
+          </div>
           <button id="btn-play" class="primary-button" type="submit"><span id="btn-play-text">Play now</span><span class="cta-arrow" aria-hidden="true">→</span></button>
           <p id="username-error" class="form-error" role="alert" hidden></p>
         </form>
@@ -48,7 +66,7 @@
         <ul class="feature-list">
           <li><span class="fi">♠</span><div><b>Real poker</b><small>Blinds, side pots, showdowns</small></div></li>
           <li><span class="fi">★</span><div><b>Level up</b><small>XP, achievements, daily bonus</small></div></li>
-          <li><span class="fi">⚡</span><div><b>Fast play</b><small>Keys F · C · R, auto-deal</small></div></li>
+          <li><span class="fi">⚡</span><div><b>Fast play</b><small>Keys, pre-actions, auto-deal</small></div></li>
         </ul>
         <p class="entry-footnote">PLAY FOR FUN <span></span> NO REAL MONEY</p>
       </div>
@@ -111,6 +129,10 @@
         <div class="player-summary">
           <div class="player-avatar" id="hero-avatar">Y</div>
           <div class="player-info"><span class="summary-label">YOUR BANK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div>
+          <div class="emote-wrap">
+            <button id="btn-emote" class="emote-button" type="button" aria-label="Send an emote" title="Emotes">😊</button>
+            <div id="emote-menu" class="emote-menu" hidden></div>
+          </div>
         </div>
         <div class="action-area">
           <div class="bet-panel" id="bet-panel">
@@ -123,6 +145,11 @@
             <button id="action-check" class="quiet-button" type="button">Check<kbd>C</kbd></button>
             <button id="action-call" class="call-button" type="button" hidden>Call <span class="btn-amt" id="call-amt">50</span><kbd>C</kbd></button>
             <button id="action-raise" class="raise-button" type="button"><span id="raise-label">Raise</span><kbd>R</kbd></button>
+            <div id="pre-actions" class="pre-actions" hidden>
+              <span class="pre-label">Waiting… pre-select</span>
+              <button id="pre-checkfold" class="pre-button" type="button" aria-pressed="false">Check / Fold</button>
+              <button id="pre-callany" class="pre-button" type="button" aria-pressed="false">Call any</button>
+            </div>
             <button id="action-next" class="raise-button next-button" type="button" hidden>Next hand <span id="next-count" class="next-count"></span><span aria-hidden="true">→</span></button>
           </div>
         </div>
@@ -134,7 +161,7 @@
       <div class="table-bottomline">
         <span>PLAY FOR FUN · NO REAL MONEY</span>
         <span id="hand-count">HAND #001</span>
-        <span class="bottom-actions"><label class="auto-toggle"><input type="checkbox" id="auto-deal" checked /> <span>Auto-deal</span></label><button id="btn-help" type="button">How to play</button></span>
+        <span class="bottom-actions"><label class="auto-toggle"><input type="checkbox" id="auto-deal" checked /> <span>Auto-deal</span></label><button id="btn-log" type="button">Log <kbd>L</kbd></button><button id="btn-help" type="button">Help <kbd>H</kbd></button></span>
       </div>
 
       <div id="poker-help" class="help-panel" hidden>
@@ -147,7 +174,12 @@
           <li><b>Fold</b> — give up the hand and lose nothing more.</li>
         </ul>
         <p class="help-ranks">Hands, best to worst: Royal flush · Straight flush · Four of a kind · Full house · Flush · Straight · Three of a kind · Two pair · Pair · High card.</p>
-        <p class="help-keys">Keys: <kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise · <kbd>←</kbd><kbd>→</kbd> size · <kbd>Enter</kbd> next hand</p>
+        <p class="help-keys">Keys: <kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise · <kbd>←</kbd><kbd>→</kbd> size · <kbd>Enter</kbd> next hand · <kbd>L</kbd> log · <kbd>H</kbd> help</p>
+        <p class="help-keys">Heads-up: the dealer posts the small blind, acts first before the flop and last after it.</p>
+      </div>
+      <div id="log-panel" class="help-panel log-panel" hidden>
+        <strong>Hand log</strong>
+        <ol id="log-list" class="log-list"></ol>
       </div>
 
       <div id="profile-panel" class="profile-panel" role="dialog" aria-modal="true" aria-labelledby="profile-title" hidden>

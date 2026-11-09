@@ -33,4 +33,8 @@ await writeFile('dist/index.html', html
 await cp('style.css', 'dist/style.css');
 await cp('assets', 'dist/assets', { recursive: true });
 await cp('leaderboard.html', 'dist/leaderboard.html');
+await cp('manifest.webmanifest', 'dist/manifest.webmanifest');
+// Stamp the service worker with a build id so each deploy gets its own cache.
+const buildId = Date.now().toString(36);
+await writeFile('dist/sw.js', (await readFile('sw.js', 'utf8')).replace('__BUILD_ID__', buildId));
 console.log('Obfuscated Kanai site written to dist/.');

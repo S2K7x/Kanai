@@ -217,8 +217,18 @@
   let profile = null, winIdsNow = null;
   const sessionStats = { handsPlayed: 0, handsWon: 0, handsLost: 0, folds: 0, calls: 0, checks: 0, raises: 0, netChips: 0 };
 
-  const SEAT_IDS = ['seat-4', 'seat-5', 'seat-6', 'seat-1', 'seat-2', 'seat-3'];
-  const SEAT_CLASSES = ['seat-bottom', 'seat-lower-left', 'seat-upper-left', 'seat-top', 'seat-upper-right', 'seat-lower-right'];
+  // Seat positions per table size. Index 0 is always the hero.
+  const LAYOUTS = {
+    2: ['seat-hu-hero', 'seat-hu-opp'],
+    6: ['seat-bottom', 'seat-lower-left', 'seat-upper-left', 'seat-top', 'seat-upper-right', 'seat-lower-right']
+  };
+  const MAX_SEATS = 6;
+  const EMOTES = ['👍', '😂', '😮', '😎', '🔥', '😭', '🤑', '🙏'];
+  let mode = 'solo', selectedMode = 'solo', selectedOpp = 0;   // 'solo' = 6-max vs 5 bots, 'headsup' = 1v1
+  let preAction = null, handLog = [], lastLogged = '', titleBlink = null, lastEmoteAt = 0;
+  const blindSeats = () => players.length === 2
+    ? { sb: buttonIdx, bb: (buttonIdx + 1) % 2 }                        // heads-up: the button posts the small blind
+    : { sb: (buttonIdx + 1) % players.length, bb: (buttonIdx + 2) % players.length };
 
   const money = n => Math.max(0, Math.round(n)).toLocaleString('en-US');
   const hero = () => players[0];
@@ -342,14 +352,21 @@
       } else p.remove();
     }
   }
-  function toast(title, sub, icon = '★', tone = '') {
+  // Toasts are queued: at most two on screen, the rest follow one by one.
+  const toastQueue = []; let toastsShown = 0;
+  function toast(title, sub, icon = '★', tone = '') { toastQueue.push({ title, sub, icon, tone }); pumpToasts(); }
+  function pumpToasts() {
     const host = $('toasts');
-    if (!host || !document.createElement) return;
-    const t = document.createElement('div');
-    t.className = 'toast ' + tone;
-    t.innerHTML = `<span class="toast-icon">${icon}</span><div><strong>${escapeHTML(title)}</strong>${sub ? `<small>${escapeHTML(sub)}</small>` : ''}</div>`;
-    host.appendChild(t);
-    setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, 3200);
+    if (!host || !document.createElement) { toastQueue.length = 0; return; }
+    while (toastsShown < 2 && toastQueue.length) {
+      const { title, sub, icon, tone } = toastQueue.shift();
+      const t = document.createElement('div');
+      t.className = 'toast ' + tone;
+      t.innerHTML = `<span class="toast-icon">${icon}</span><div><strong>${escapeHTML(title)}</strong>${sub ? `<small>${escapeHTML(sub)}</small>` : ''}</div>`;
+      host.appendChild(t);
+      toastsShown++;
+      setTimeout(() => { t.classList.add('out'); setTimeout(() => { t.remove(); toastsShown--; pumpToasts(); }, 380); }, toastQueue.length ? 2000 : 2800);
+    }
   }
 
   /* ======================================================================
@@ -367,7 +384,9 @@
     { id: 'allin_win', icon: '🔥', title: 'All-in survivor', desc: 'Win an all-in showdown' },
     { id: 'streak3', icon: '⚡', title: 'Hot streak', desc: 'Win 3 hands in a row' },
     { id: 'big_pot', icon: '💰', title: 'High roller', desc: 'Win a pot of 1,500+' },
-    { id: 'double_up', icon: '🚀', title: 'Double up', desc: 'Reach a 2,000 chip stack' }
+    { id: 'double_up', icon: '🚀', title: 'Double up', desc: 'Reach a 2,000 chip stack' },
+    { id: 'duelist', icon: '⚔️', title: 'Duelist', desc: 'Win a heads-up showdown' },
+    { id: 'chatty', icon: '💬', title: 'Table talk', desc: 'Send your first emote' }
   ];
   const xpForLevel = l => 50 * l * (l - 1); // L1:0  L2:100  L3:300  L4:600 …
   function levelOf(xp) { let l = 1; while (xp >= xpForLevel(l + 1)) l++; return l; }
@@ -441,10 +460,15 @@
      Seat DOM — built once per session, then patched field by field
      ====================================================================== */
   function buildSeats() {
+    const n = players.length, layout = LAYOUTS[n] || LAYOUTS[6];
+    const felt = $('table-felt');
+    if (felt) felt.className = 'table-felt layout-' + n;
+    for (let i = n; i < MAX_SEATS; i++) { const el = $('seat-' + (i + 1)); if (el) { el.hidden = true; el.innerHTML = ''; el.className = 'seat'; } }
     players.forEach((p, idx) => {
-      const root = $(SEAT_IDS[idx]);
+      const root = $('seat-' + (idx + 1));
       if (!root) return;
-      root.className = 'seat ' + SEAT_CLASSES[idx] + (p.isHero ? ' hero-seat' : '');
+      root.hidden = false;
+      root.className = 'seat ' + layout[idx] + (n === 2 ? ' seat-hu' : '') + (p.isHero ? ' hero-seat' : '');
       root.innerHTML = `
         <span class="seat-status"></span>
         <div class="seat-card">
@@ -460,7 +484,7 @@
         <div class="seat-bet" hidden><span class="chip-stack"></span><span class="bet-val"></span></div>`;
       const q = sel => root.querySelector(sel);
       p.ui = { root, status: q('.seat-status'), flag: q('.flag-slot'), badge: q('.seat-badge'), stack: q('.stack-val'), hole: q('.seat-hole'), equity: q('.seat-equity'), handtag: q('.seat-handtag'), bet: q('.seat-bet'), betVal: q('.bet-val') };
-      if (!p.isHero) root.title = `${p.name} — ${p.style}`;
+      root.title = p.isHero ? '' : `${p.name} — ${p.style}`;
       if (p.ui.stack && p.ui.stack.dataset) p.ui.stack.dataset.val = String(p.stack);
     });
   }
@@ -473,7 +497,7 @@
     toggle(u.root, 'seat-winner', !!p.winner);
     toggle(u.root, 'thinking', active && !p.isHero);
 
-    const sb = (buttonIdx + 1) % players.length, bb = (buttonIdx + 2) % players.length;
+    const { sb, bb } = blindSeats();
     const badge = idx === buttonIdx ? 'D' : idx === sb ? 'SB' : idx === bb ? 'BB' : '';
     if (u.badge._t !== badge) { u.badge.className = 'seat-badge' + (badge ? ' badge-' + badge[0] : ''); setText(u.badge, badge); }
 
@@ -578,6 +602,7 @@
     renderBoard(winIdsNow);
     renderHeroHand();
     setText($('hand-message'), message);
+    if (message !== lastLogged && !/^(Your move|Blinds posted)/.test(message)) { lastLogged = message; pushLog(message); }
     renderSeats();
     updateControls();
   }
@@ -596,6 +621,12 @@
     $('action-call').hidden = !act || toCall <= 0;
     $('action-raise').hidden = !act;
     $('action-next').hidden = !finished;
+    const waiting = phase === 'betting' && !finished && !act && h.hole && h.hole.length && !h.folded && !h.allIn && !runout;
+    $('pre-actions').hidden = !waiting;
+    if (waiting) {
+      toggle($('pre-checkfold'), 'on', preAction === 'checkfold'); $('pre-checkfold').setAttribute('aria-pressed', String(preAction === 'checkfold'));
+      toggle($('pre-callany'), 'on', preAction === 'callany'); $('pre-callany').setAttribute('aria-pressed', String(preAction === 'callany'));
+    }
     if (toCall > 0) {
       const callAmt = Math.min(toCall, h.stack);
       setText($('call-amt'), money(callAmt));
@@ -620,6 +651,7 @@
     } else {
       panel.classList.add('disabled');
       range.disabled = true;
+      setText($('bet-amount'), '—');
     }
     setText($('bet-label'), toCall > 0 || street === 'preflop' ? 'RAISE TO' : 'BET');
   }
@@ -683,9 +715,10 @@
      Hand lifecycle
      ====================================================================== */
   function initPlayers() {
+    const bots = mode === 'headsup' ? [BOT_ROSTER[selectedOpp] || BOT_ROSTER[0]] : BOT_ROSTER;
     players = [
       { isHero: true, name: username, initial: (username[0] || 'Y').toUpperCase(), flag: heroFlag, avatar: 'linear-gradient(145deg,#8a5bff,#5b38b0)', stack: START, style: 'You' },
-      ...BOT_ROSTER.map(b => ({ ...b, isHero: false, initial: b.name[0], stack: 700 + Math.floor(Math.random() * 900) }))
+      ...bots.map(b => ({ ...b, isHero: false, initial: b.name[0], stack: mode === 'headsup' ? START : 700 + Math.floor(Math.random() * 900) }))
     ];
     buttonIdx = Math.floor(Math.random() * players.length);
     boardSlots = null;
@@ -704,7 +737,11 @@
     $('hand-message').hidden = false;
     if (!players.length) initPlayers();
     if (hero().stack < BB) { hero().stack = START; toast('Seat topped up', `Back to ${money(START)} chips`, '🪙'); }
-    players.forEach((p, i) => { if (i > 0 && p.stack < BB * 4) p.stack = 600 + Math.floor(Math.random() * 1000); });
+    players.forEach((p, i) => {
+      if (i === 0 || p.stack >= BB * 4) return;
+      p.stack = mode === 'headsup' ? START : 600 + Math.floor(Math.random() * 1000);
+      if (mode === 'headsup') { toast(`${p.name} rebuys`, `Back to ${money(START)} chips — keep the pressure on`, '🔁'); pushLog(`${p.name} rebuys for ${money(START)}.`, 'info'); }
+    });
     players.forEach(p => Object.assign(p, { hole: [], bet: 0, committed: 0, folded: false, allIn: false, acted: false, last: '', reveal: false, winner: false, winAmount: 0, equity: null, handName: '', winCards: null }));
 
     handNo++; sessionStats.handsPlayed++;
@@ -715,19 +752,23 @@
     buttonIdx = (buttonIdx + 1) % players.length;
 
     for (let r = 0; r < 2; r++) for (let k = 1; k <= players.length; k++) players[(buttonIdx + k) % players.length].hole.push(deck.pop());
-    const sbIdx = (buttonIdx + 1) % players.length, bbIdx = (buttonIdx + 2) % players.length;
+    const { sb: sbIdx, bb: bbIdx } = blindSeats();
     postBlind(sbIdx, SB); postBlind(bbIdx, BB);
     currentBet = BB; minRaise = BB; lastRaiser = bbIdx;
     toActIdx = (bbIdx + 1) % players.length;
 
     message = 'Blinds posted. Cards in the air.';
+    preAction = null;
+    handLog = []; lastLogged = '';
+    pushLog(`Hand #${handNo} · ${players.length === 2 ? 'Heads-up' : '6-max'} · blinds ${SB}/${BB}`, 'head');
+    pushLog(`You hold ${hero().hole.map(cardCode).join(' ')}.`, 'hero');
     sfx.deal();
     render();
     save();
     sendEvent('hand_started', {
       handNumber: handNo, startingStack: handStartStack, stackAfterBlinds: hero().stack,
       smallBlind: SB, bigBlind: BB, blindLevel: `${SB}/${BB}`, pot, privateCards: hero().hole.map(cardCode),
-      street: 'preflop', tableType: 'simulated_play_money', playerCount: players.length,
+      street: 'preflop', tableType: 'simulated_play_money', tableMode: mode, playerCount: players.length,
       buttonSeat: buttonIdx, startedAt: new Date(handStartedAt).toISOString()
     });
     later(760, schedule);
@@ -753,6 +794,8 @@
       message = currentBet - hero().bet > 0 ? 'Your move — call, raise or fold.' : 'Your move — check or bet.';
       setText($('hand-message'), message);
       startTurnTimer();
+      notifyTurn();
+      if (runPreAction()) return;
     } else {
       clearTurnTimer();
       later(520 + Math.random() * 700, () => botAct(idx));
@@ -913,9 +956,9 @@
       const lv = live();
       const eq = showdownEquity(lv.map(p => p.hole), board);
       lv.forEach((p, i) => { p.equity = eq[i]; });
-      message = `The ${street}. ${lv.map(p => `${p.isHero ? 'You' : p.name.split(' ')[0]} ${Math.round(p.equity * 100)}%`).join(' · ')}`;
+      message = `${street[0].toUpperCase() + street.slice(1)}: ${(street === 'flop' ? board.slice(0, 3) : [board[board.length - 1]]).map(cardCode).join(' ')} · ${lv.map(p => `${p.isHero ? 'You' : p.name.split(' ')[0]} ${Math.round(p.equity * 100)}%`).join(' · ')}`;
     } else {
-      message = { flop: 'The flop.', turn: 'The turn.', river: 'The river.' }[street];
+      message = street === 'flop' ? `Flop: ${board.slice(0, 3).map(cardCode).join(' ')}` : `${street === 'turn' ? 'Turn' : 'River'}: ${cardCode(board[board.length - 1])}`;
     }
     toActIdx = (buttonIdx + 1) % players.length;
     render();
@@ -1026,6 +1069,7 @@
         if (cat === 7) unlock('quads');
         if (cat === 8) unlock('straight_flush');
         if (h.allIn || players.some(p => p.allIn && !p.folded)) unlock('allin_win');
+        if (players.length === 2) unlock('duelist');
       } else if (heroAggressed) unlock('pressure');
       if (profile.winStreak >= 3) unlock('streak3');
       if (res.heroWin >= 1500) unlock('big_pot');
@@ -1035,6 +1079,7 @@
     saveProfile();
 
     if (res.heroWon) { sfx.win(); if (res.heroWin >= 400) confetti(res.heroWin >= 1200 ? 60 : 34); } else sfx.lose();
+    botReactions(res);
 
     const banner = $('winner-banner');
     banner.className = 'winner-banner' + (res.heroWon ? ' win' : '');
@@ -1059,6 +1104,80 @@
   }
 
   /* ======================================================================
+     Hand log, pre-actions, emotes, turn alerts
+     ====================================================================== */
+  function pushLog(text, cls) {
+    if (!cls) cls = /^You\b/.test(text) ? 'hero' : /^(Flop|Turn|River)\b/.test(text) ? 'street' : /\bwins?\b|split|Split/.test(text) ? 'result' : '';
+    handLog.push({ text, cls });
+    if (handLog.length > 80) handLog.shift();
+    if (!$('log-panel').hidden) renderLog();
+  }
+  function renderLog() {
+    const list = $('log-list');
+    if (!list) return;
+    list.innerHTML = handLog.map(l => `<li class="${l.cls}">${escapeHTML(l.text)}</li>`).join('') || '<li>No actions yet.</li>';
+    list.scrollTop = list.scrollHeight;
+  }
+  function togglePanel(id) {
+    const panel = $(id);
+    const open = panel.hidden;
+    ['poker-help', 'log-panel'].forEach(other => { if (other !== id) $(other).hidden = true; });
+    panel.hidden = !open;
+    if (id === 'log-panel' && open) renderLog();
+    if (id === 'poker-help') sendEvent('help_toggled', { open });
+  }
+  // Pre-selected action that fires as soon as it becomes your turn.
+  function runPreAction() {
+    if (!preAction || !heroCanAct()) return false;
+    const toCall = Math.max(0, currentBet - hero().bet);
+    const kind = preAction === 'checkfold' ? (toCall > 0 ? 'fold' : 'check') : 'call';
+    preAction = null;
+    setTimeout(() => heroAct(kind), 280);
+    return true;
+  }
+  function notifyTurn() {
+    if (navigator.vibrate && document.hidden === false) { try { navigator.vibrate(35); } catch (_) {} }
+    if (document.hidden && !titleBlink) {
+      const base = document.title; let on = false;
+      titleBlink = setInterval(() => { on = !on; document.title = on ? '● Your turn — Kanai' : base; }, 900);
+      const stop = () => { clearInterval(titleBlink); titleBlink = null; document.title = base; document.removeEventListener('visibilitychange', stop); };
+      document.addEventListener('visibilitychange', stop);
+    }
+  }
+  function showEmote(p, e) {
+    if (!p || !p.ui || !p.ui.root || !document.createElement) return;
+    const old = p.ui.root.querySelector && p.ui.root.querySelector('.emote-bubble');
+    if (old && old.remove) old.remove();
+    const b = document.createElement('span');
+    b.className = 'emote-bubble'; b.textContent = e;
+    p.ui.root.appendChild(b);
+    setTimeout(() => b.remove && b.remove(), 2600);
+  }
+  function sendEmote(e) {
+    if (!EMOTES.includes(e) || !players.length) return;
+    const now = Date.now();
+    if (now - lastEmoteAt < 1200) return;
+    lastEmoteAt = now;
+    showEmote(hero(), e);
+    unlock('chatty');
+    // Opponents sometimes answer back.
+    const others = players.filter(p => !p.isHero && !p.folded);
+    if (others.length && Math.random() < 0.55) {
+      const bot = others[Math.floor(Math.random() * others.length)];
+      const answers = { '😂': ['😂', '😏'], '😎': ['🙄', '😏'], '🔥': ['🔥', '😮'], '😭': ['😂', '🙏'], '🤑': ['😤', '🙄'], '👍': ['👍'], '😮': ['😎'], '🙏': ['👍', '😇'] };
+      const pool = answers[e] || ['👍'];
+      setTimeout(() => showEmote(bot, pool[Math.floor(Math.random() * pool.length)]), 700 + Math.random() * 900);
+    }
+  }
+  function botReactions(res) {
+    players.forEach(p => {
+      if (p.isHero) return;
+      if (p.winner && (p.winAmount || 0) >= 400 && Math.random() < 0.45) setTimeout(() => showEmote(p, ['😎', '🤑', '😏'][Math.floor(Math.random() * 3)]), 500 + Math.random() * 700);
+      else if (res.showdown && p.allIn && !p.winner && !p.folded && Math.random() < 0.6) setTimeout(() => showEmote(p, ['😭', '😤', '🙈'][Math.floor(Math.random() * 3)]), 600 + Math.random() * 600);
+    });
+  }
+
+  /* ======================================================================
      Input
      ====================================================================== */
   $('bet-range').addEventListener('input', syncBetAmount);
@@ -1075,13 +1194,19 @@
     syncBetAmount();
     sendEvent('bet_preset_selected', { preset, selectedRaiseTo: Number(range.value) });
   }));
+  $('pre-checkfold').addEventListener('click', () => { preAction = preAction === 'checkfold' ? null : 'checkfold'; updateControls(); });
+  $('pre-callany').addEventListener('click', () => { preAction = preAction === 'callany' ? null : 'callany'; updateControls(); });
+  $('btn-emote').addEventListener('click', () => { const m = $('emote-menu'); m.hidden = !m.hidden; });
+  $('emote-menu').innerHTML = EMOTES.map(e => `<button type="button" data-e="${e}" aria-label="Send ${e}">${e}</button>`).join('');
+  $('emote-menu').addEventListener('click', e => { const b = e.target.closest ? e.target.closest('button') : null; if (b && b.dataset.e) { sendEmote(b.dataset.e); $('emote-menu').hidden = true; } });
   $('action-fold').addEventListener('click', () => heroAct('fold'));
   $('action-check').addEventListener('click', () => heroAct('check'));
   $('action-call').addEventListener('click', () => heroAct('call'));
   $('action-raise').addEventListener('click', () => heroAct('raise'));
   $('action-next').addEventListener('click', () => { if (finished) startHand(); });
   $('auto-deal').addEventListener('change', e => { store.set('kanai_autodeal', e.target.checked); if (!e.target.checked) stopAutoDeal(); else if (finished) startAutoDeal(); });
-  $('btn-help').addEventListener('click', () => { const panel = $('poker-help'); panel.hidden = !panel.hidden; sendEvent('help_toggled', { open: !panel.hidden }); });
+  $('btn-help').addEventListener('click', () => togglePanel('poker-help'));
+  $('btn-log').addEventListener('click', () => togglePanel('log-panel'));
   $('btn-sound').addEventListener('click', e => {
     soundOn = !soundOn;
     store.set('kanai_sound', soundOn);
@@ -1098,11 +1223,13 @@
 
   document.addEventListener('keydown', e => {
     if ($('screen-game').hidden) return;
-    if (e.key === 'Escape') { if (!$('profile-panel').hidden) closeProfile(); $('poker-help').hidden = true; return; }
+    if (e.key === 'Escape') { if (!$('profile-panel').hidden) closeProfile(); $('poker-help').hidden = true; $('log-panel').hidden = true; $('emote-menu').hidden = true; return; }
     const tag = (e.target.tagName || '').toLowerCase();
     if (tag === 'input' && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
     if (!$('profile-panel').hidden) return;
     const k = (e.key || '').toLowerCase();
+    if (k === 'h') { e.preventDefault(); togglePanel('poker-help'); return; }
+    if (k === 'l') { e.preventDefault(); togglePanel('log-panel'); return; }
     if (finished && (k === 'enter' || k === ' ' || k === 'n')) { e.preventDefault(); startHand(); return; }
     if (!heroCanAct()) return;
     if (k === 'f') { e.preventDefault(); heroAct('fold'); }
@@ -1127,21 +1254,39 @@
       input.dispatchEvent && input.dispatchEvent(new Event('input'));
       input.focus();
     });
+
+    // Table picker: 6-max vs five bots, or a heads-up duel against one chosen opponent.
+    selectedMode = store.get('kanai_mode', 'solo') === 'headsup' ? 'headsup' : 'solo';
+    selectedOpp = Math.max(0, Math.min(BOT_ROSTER.length - 1, Number(store.get('kanai_opp', 0)) || 0));
+    const oppHost = $('opponent-picker');
+    if (oppHost) oppHost.innerHTML = BOT_ROSTER.map((b, i) => `<button type="button" class="opp" data-opp="${i}" role="radio" aria-checked="false" title="${escapeHTML(b.name)} — ${escapeHTML(b.style)}"><span class="opp-avatar" style="background:${b.avatar}">${b.name[0]}</span><b>${escapeHTML(b.name.split(' ')[0])}</b><small>${escapeHTML(b.style)}</small></button>`).join('');
+    let bonusReady = false, returning = false;
+    const syncPicker = () => {
+      document.querySelectorAll('.mode-card').forEach(btn => { const on = btn.dataset.mode === selectedMode; toggle(btn, 'on', on); btn.setAttribute('aria-checked', String(on)); });
+      document.querySelectorAll('.opp').forEach(btn => { const on = Number(btn.dataset.opp) === selectedOpp; toggle(btn, 'on', on); btn.setAttribute('aria-checked', String(on)); });
+      const hu = $('hu-options'); if (hu) hu.hidden = selectedMode !== 'headsup';
+      const btnText = $('btn-play-text');
+      if (btnText && !$('btn-play').disabled) btnText.textContent = bonusReady ? 'Play & claim bonus'
+        : selectedMode === 'headsup' ? `Challenge ${BOT_ROSTER[selectedOpp].name.split(' ')[0]}` : returning ? 'Continue playing' : 'Play now';
+    };
+    document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => { selectedMode = btn.dataset.mode; syncPicker(); }));
+    document.querySelectorAll('.opp').forEach(btn => btn.addEventListener('click', () => { selectedOpp = Number(btn.dataset.opp); syncPicker(); }));
+
     const last = store.get('kanai_last_player', null);
-    if (!last || typeof last !== 'string') return;
-    const prog = loadProfile(last);
-    const saved = store.get('kanai_' + last.toLowerCase(), {});
     const box = $('returning');
-    if (!box) return;
-    input.value = last;
-    $('returning-avatar').textContent = last[0].toUpperCase();
-    $('returning-name').textContent = `Welcome back, ${last}`;
-    $('returning-meta').textContent = `Lv ${levelOf(prog.xp)} · ${money(typeof saved.heroStack === 'number' ? saved.heroStack : START)} chips · ${prog.achievements.length}/${ACHIEVEMENTS.length} achievements`;
-    const bonusReady = prog.lastBonusDay !== dayKey();
-    $('returning-bonus').hidden = !bonusReady;
-    box.hidden = false;
-    const btnText = $('btn-play-text');
-    if (btnText) btnText.textContent = bonusReady ? 'Play & claim bonus' : 'Continue playing';
+    if (last && typeof last === 'string' && box) {
+      const prog = loadProfile(last);
+      const saved = store.get('kanai_' + last.toLowerCase(), {});
+      input.value = last;
+      $('returning-avatar').textContent = last[0].toUpperCase();
+      $('returning-name').textContent = `Welcome back, ${last}`;
+      $('returning-meta').textContent = `Lv ${levelOf(prog.xp)} · ${money(typeof saved.heroStack === 'number' ? saved.heroStack : START)} chips · ${prog.achievements.length}/${ACHIEVEMENTS.length} achievements`;
+      bonusReady = prog.lastBonusDay !== dayKey();
+      $('returning-bonus').hidden = !bonusReady;
+      box.hidden = false;
+      returning = true;
+    }
+    syncPicker();
   })();
 
   /* ======================================================================
@@ -1161,6 +1306,8 @@
     soundOn = store.get('kanai_sound', true) !== false;
     $('btn-sound').classList.toggle('is-muted', !soundOn);
     $('auto-deal').checked = store.get('kanai_autodeal', true) !== false;
+    mode = selectedMode === 'headsup' ? 'headsup' : 'solo';
+    store.set('kanai_mode', mode); store.set('kanai_opp', selectedOpp);
     initPlayers();
     const data = store.get('kanai_' + username.toLowerCase(), {});
     if (typeof data.heroStack === 'number') hero().stack = data.heroStack;
@@ -1179,6 +1326,11 @@
     if (players.length) { hero().flag = heroFlag; if (hero().ui) hero().ui.flag.innerHTML = flagMarkup(heroFlag); }
   });
 
+
+  // Installable + offline-capable (service worker only on secure origins).
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  }
   // Exposed for automated tests only (no effect on gameplay).
-  window.__kanaiTest = { evaluate: scoreOf, describe, showdownEquity, buildPots: () => buildPots(), state: () => ({ players, pot, board, street, phase, finished }) };
+  window.__kanaiTest = { evaluate: scoreOf, describe, showdownEquity, buildPots: () => buildPots(), state: () => ({ players, pot, board, street, phase, finished, buttonIdx, actorIdx, currentBet }) };
 })();
