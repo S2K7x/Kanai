@@ -1,7 +1,7 @@
 /* Kanai Poker service worker: offline play.
    The cache name is stamped with a build id by build.mjs, so every deploy
    gets a fresh cache and old ones are removed on activate. */
-const VERSION = 'mw9335tm';
+const VERSION = 'mw9409qa';
 const CACHE = 'kanai-' + VERSION;
 const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'poker.js', 'manifest.webmanifest',
   'assets/kanai-mark.svg', 'assets/kanai-logo.svg', 'assets/kanai-touch.png', 'assets/kanai-192.png'];

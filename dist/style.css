@@ -338,7 +338,7 @@ kbd{display:none}
 
 /* ---------- landing: table picker ---------- */
 .field-label{margin:4px 0 -3px;font-size:10px;font-weight:700;letter-spacing:.19em;color:#aaa5b3}
-.mode-picker{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mode-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .mode-card{position:relative;display:grid;justify-items:start;gap:3px;padding:12px 12px 11px;border:1px solid #ffffff18;border-radius:13px;background:#ffffff06;text-align:left;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
 .mode-card:hover{background:#ffffff0d;transform:translateY(-1px)}
 .mode-card.on{border-color:#aa83ffaa;background:linear-gradient(140deg,#8d5bff26,#8d5bff0a);box-shadow:0 0 0 3px #8d5bff1f}
@@ -410,6 +410,60 @@ kbd{display:none}
 .log-list li.street{color:var(--gold);font-weight:600}
 .log-list li.result{color:var(--green);font-weight:700}
 .log-list li.info{color:#8f89a0;font-style:italic}
+
+
+/* ---------- tournament, missions, coach, juice ---------- */
+.mode-icon.trophy{font-size:15px;line-height:14px;height:14px}
+.mission-badge{padding:2px 7px;border-radius:20px;background:#ffffff10;color:#cfc6e2;font:700 10px var(--display);white-space:nowrap}
+.mission-badge.complete{background:#36d39b26;color:var(--green)}
+.poker-room:has(.tourney-hud:not([hidden])) .table-area{padding-top:44px}
+.tourney-hud{position:relative;z-index:4;align-self:center;margin:10px auto 0;display:flex;align-items:center;gap:10px;padding:5px 14px;border:1px solid #ffcf5c44;border-radius:30px;background:#0c0a12d9;color:#d9d2e6;font-size:10px;font-weight:600;white-space:nowrap;box-shadow:0 6px 18px #0007}
+.tourney-hud b{color:var(--gold);font:800 10px var(--display);letter-spacing:.12em}
+.tourney-hud span+span::before{content:"·";margin-right:10px;color:#6f6880}
+.seat-mid-left{left:0;top:42%}
+.seat-mid-right{right:0;top:42%}
+.seat-mid-left .seat-bet{left:106%;top:50%;transform:translateY(-50%)}
+.seat-mid-right .seat-bet{right:106%;top:50%;transform:translateY(-50%)}
+.coach-tip{position:absolute;z-index:4;left:50%;bottom:calc(7% + clamp(86px,9.8vw,136px) + 34px);transform:translateX(-50%);display:grid;gap:2px;max-width:min(92%,460px);padding:7px 14px;border-radius:12px;background:#0c0a12ee;border:1px solid #ffffff22;text-align:center;font-size:11px;color:#cdc5da;box-shadow:0 8px 22px #0008;animation:btn-in .25s ease both}
+.coach-tip b{margin-right:6px;padding:1px 6px;border-radius:5px;background:#8d5bff33;color:#d7c4ff;font:800 9px var(--display);letter-spacing:.08em;text-transform:uppercase}
+.coach-tip em{font-style:normal;font-weight:700;font-size:12px}
+.coach-tip.good{border-color:#36d39b66}.coach-tip.good em{color:var(--green)}
+.coach-tip.ok{border-color:#ffcf5c55}.coach-tip.ok em{color:var(--gold)}
+.coach-tip.bad em{color:var(--red)}.coach-tip.meh em{color:#b9b1c7}
+.table-felt:has(.coach-tip:not([hidden])) .hand-message{visibility:hidden}
+.playing-card.rabbit{opacity:.62;outline:2px dashed #ffffff55;outline-offset:2px;filter:saturate(.6)}
+.action-buttons .rabbit-button{flex:none;padding:0 16px;font-size:12px;color:#d9d0ea}
+.board-slot.sweat .card-slot{border-color:#ffcf5c88;background:#ffcf5c14;animation:sweat .55s ease-in-out infinite alternate}
+@keyframes sweat{from{box-shadow:0 0 0 0 #ffcf5c00}to{box-shadow:0 0 26px 4px #ffcf5c55}}
+.stamp{position:absolute;top:44%;left:50%;z-index:26;transform:translate(-50%,-50%) rotate(-8deg);padding:8px 26px;border:4px solid #ff6b86;border-radius:14px;color:#ff6b86;font:900 clamp(34px,5vw,64px)/1 var(--display);letter-spacing:.06em;text-shadow:0 4px 30px #ff6b8677;background:#0c0a12aa;animation:stamp 1.1s cubic-bezier(.2,.9,.3,1.25) forwards;pointer-events:none;white-space:nowrap}
+.stamp.gold{border-color:var(--gold);color:var(--gold);text-shadow:0 4px 30px #ffcf5c77}
+@keyframes stamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(2.2)}18%{opacity:1;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)}26%{transform:translate(-50%,-50%) rotate(-8deg) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(1.06)}}
+.table-felt.shake-1{animation:shake1 .32s ease}
+.table-felt.shake-2{animation:shake2 .5s ease}
+@keyframes shake1{20%{transform:translate(-3px,1px)}40%{transform:translate(3px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,1px)}}
+@keyframes shake2{15%{transform:translate(-6px,2px) rotate(-.3deg)}30%{transform:translate(6px,-2px) rotate(.3deg)}45%{transform:translate(-4px,1px)}60%{transform:translate(4px,-1px)}80%{transform:translate(-2px,0)}}
+.missions{display:grid;gap:8px}
+.mission{padding:10px 12px;border:1px solid #ffffff10;border-radius:12px;background:#ffffff05}
+.mission.done{border-color:#36d39b44;background:linear-gradient(120deg,#36d39b14,#ffffff04)}
+.m-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#e3dcef}
+.m-top b{font:800 12px var(--display);color:#cfc6e2;white-space:nowrap}
+.mission.done .m-top b{color:var(--green)}
+.m-bar{position:relative;display:block;height:6px;margin-top:7px;border-radius:6px;background:#ffffff12;overflow:hidden}
+.m-bar i{position:absolute;inset:0 auto 0 0;border-radius:inherit;background:linear-gradient(90deg,var(--violet),#ff9fd0)}
+.mission.done .m-bar i{background:var(--green)}
+.tourney-end{position:absolute;inset:0;z-index:22;display:grid;place-items:center;padding:16px;background:#07060bcc;backdrop-filter:blur(6px);animation:fade .25s ease}
+.te-card{display:grid;justify-items:center;gap:8px;width:min(440px,100%);padding:30px 26px;border:1px solid #ffffff1c;border-radius:22px;background:linear-gradient(150deg,#1c1929,#110f19);text-align:center;box-shadow:0 30px 80px #000c;animation:win-pop2 .35s cubic-bezier(.2,.9,.3,1.3)}
+.tourney-end.win .te-card{border-color:#ffcf5c66;box-shadow:0 30px 80px #000c,0 0 60px #ffcf5c33}
+.te-place{font:900 64px/1 var(--display);letter-spacing:-.04em;background:linear-gradient(120deg,#fff,#b9a4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tourney-end.win .te-place{background-image:linear-gradient(120deg,#ffe9a8,#ffcf5c 50%,#f0a93a)}
+.te-card h2{margin:0;font:800 22px var(--display)}
+.te-card p{margin:0;color:#b5adc3;font-size:13px}
+.te-rewards{display:flex;gap:8px;margin:6px 0 4px}
+.te-rewards span{padding:6px 12px;border-radius:30px;background:#ffffff0d;font:800 12px var(--display);color:var(--gold)}
+.te-rewards span+span{color:#d7c4ff}
+.te-actions{display:grid;gap:8px;width:100%}
+.link-button{border:0;background:none;color:#a9a1b8;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.link-button:hover{color:#fff}
 
 /* ---------- responsive ---------- */
 @media(max-width:1000px){
@@ -492,6 +546,8 @@ kbd{display:none}
   .seat-top{top:-2%}.seat-bottom{bottom:-2%}
   .seat-upper-left{left:-1%;top:22%}.seat-lower-left{left:-1%;bottom:16%}
   .seat-upper-right{right:-1%;top:22%}.seat-lower-right{right:-1%;bottom:16%}
+  .seat-mid-left{left:-1%;top:40%}.seat-mid-right{right:-1%;top:40%}
+  .seat-mid-left .seat-bet{left:101%}.seat-mid-right .seat-bet{right:101%}
   .community-cards{top:42%;gap:4px;min-height:58px}
   .playing-card{width:clamp(36px,10.5vw,50px);height:clamp(52px,15vw,70px);padding:5px 6px;border-radius:7px;font-size:17px}
   .card-slot{width:clamp(36px,10.5vw,50px);height:clamp(52px,15vw,70px)}
@@ -533,6 +589,18 @@ kbd{display:none}
   .opponent-picker{gap:4px}
   .opp small{display:none}
   .pre-label{display:none}
+  .mode-picker{grid-template-columns:1fr}
+  .mode-card{grid-template-columns:auto 1fr;column-gap:10px;align-items:center}
+  .mode-card .mode-icon{grid-row:span 2;margin:0}
+  .mission-badge{display:none}
+  .tourney-hud{margin:6px auto 0;gap:6px;padding:4px 10px;font-size:8.5px}
+  .poker-room:has(.tourney-hud:not([hidden])) .table-area{padding-top:30px}
+  .seat-nm{max-width:58px;overflow:hidden;text-overflow:ellipsis}
+  .tourney-hud span+span::before{margin-right:6px}
+  .coach-tip{bottom:calc(5% + 108px);font-size:10px;padding:6px 10px}
+  .coach-tip em{font-size:11px}
+  .stamp{font-size:34px;border-width:3px}
+  .action-buttons .rabbit-button{padding:0 10px;font-size:11px}
   .emote-menu{left:auto;right:0}
   .toasts{top:60px;right:12px;left:12px;justify-items:stretch}
   .toast{min-width:0}

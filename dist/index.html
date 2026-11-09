@@ -25,9 +25,9 @@
       <div class="entry-card">
         <a class="brand" href="#" aria-label="Kanai Poker home"><img class="brand-mark" src="assets/kanai-mark.svg" alt="" width="40" height="40" /><span class="brand-name">KANAI<small>POKER</small></span></a>
         <div class="entry-copy">
-          <p class="eyebrow"><span class="live-dot"></span> NO-LIMIT HOLD’EM · 6-MAX & HEADS-UP</p>
+          <p class="eyebrow"><span class="live-dot"></span> NO-LIMIT HOLD’EM · CASH, DUELS &amp; SIT &amp; GO</p>
           <h1>Take your <span class="grad">seat.</span></h1>
-          <p>Real betting rounds against opponents who each play their own way — a full table or a one-on-one duel. Free chips, no real money.</p>
+          <p>Real betting rounds against opponents who each play their own way — a full table, a one-on-one duel or a rising-blinds tournament. Free chips, no real money.</p>
         </div>
 
         <div id="returning" class="returning" hidden>
@@ -53,6 +53,10 @@
             <button type="button" class="mode-card" data-mode="headsup" role="radio" aria-checked="false">
               <span class="mode-icon duel" aria-hidden="true"><i></i><i></i></span>
               <b>Heads-up 1v1</b><small>One opponent, every hand counts</small>
+            </button>
+            <button type="button" class="mode-card" data-mode="tourney" role="radio" aria-checked="false">
+              <span class="mode-icon trophy" aria-hidden="true">🏆</span>
+              <b>Sit &amp; Go</b><small>Rising blinds, last one standing wins</small>
             </button>
           </div>
           <div id="hu-options" class="hu-options" hidden>
@@ -97,14 +101,15 @@
     <section id="poker-room" class="poker-room" aria-label="Kanai Texas Hold'em table">
       <header class="topbar">
         <a class="brand brand-small" href="#" aria-label="Kanai Poker"><img class="brand-mark" src="assets/kanai-mark.svg" alt="" width="32" height="32" /><span class="brand-name">KANAI<small>POKER</small></span></a>
-        <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM <i></i> 25 / 50</div>
+        <div class="table-meta"><span class="online-dot"></span> PRIVATE TABLE <i></i> NO-LIMIT HOLD’EM <i></i> <span id="blind-meta">25 / 50</span></div>
         <div class="topbar-actions">
-          <button id="btn-profile" class="level-chip" type="button" aria-label="Open your profile"><span class="level-num" id="level-num">Lv 1</span><span class="xp-bar"><i id="xp-fill"></i></span></button>
+          <button id="btn-profile" class="level-chip" type="button" aria-label="Open your profile and daily missions"><span class="level-num" id="level-num">Lv 1</span><span class="xp-bar"><i id="xp-fill"></i></span><span class="mission-badge" id="mission-badge">🎯 0/3</span></button>
           <div class="chip-balance" aria-label="Your chip balance"><span class="chip-ico" aria-hidden="true"></span><strong id="topbar-stack">1,000</strong></div>
           <button id="btn-sound" class="icon-button" aria-label="Toggle sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></svg></button>
         </div>
       </header>
 
+      <div id="tourney-hud" class="tourney-hud" aria-live="polite" hidden></div>
       <section class="table-area">
         <div class="table-felt" id="table-felt">
           <div class="felt-glow" aria-hidden="true"></div>
@@ -118,6 +123,7 @@
           <div id="seat-5" class="seat seat-lower-left"></div>
           <div id="seat-6" class="seat seat-upper-left"></div>
           <div id="community-cards" class="community-cards" aria-label="Community cards"></div>
+          <div id="coach-tip" class="coach-tip" aria-live="polite" hidden></div>
           <div id="hero-hand" class="hero-hand" aria-live="polite" hidden></div>
           <div id="hero-cards" class="hero-cards" aria-label="Your private cards"></div>
           <div id="hand-message" class="hand-message" aria-live="polite">Waiting for the next hand</div>
@@ -128,7 +134,7 @@
       <footer class="controls-area">
         <div class="player-summary">
           <div class="player-avatar" id="hero-avatar">Y</div>
-          <div class="player-info"><span class="summary-label">YOUR BANK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div>
+          <div class="player-info"><span class="summary-label" id="bank-label">YOUR BANK</span><strong id="hero-stack">1,000</strong><span id="hero-name" class="hero-name">Player</span></div>
           <div class="emote-wrap">
             <button id="btn-emote" class="emote-button" type="button" aria-label="Send an emote" title="Emotes">😊</button>
             <div id="emote-menu" class="emote-menu" hidden></div>
@@ -150,6 +156,7 @@
               <button id="pre-checkfold" class="pre-button" type="button" aria-pressed="false">Check / Fold</button>
               <button id="pre-callany" class="pre-button" type="button" aria-pressed="false">Call any</button>
             </div>
+            <button id="btn-rabbit" class="quiet-button rabbit-button" type="button" hidden title="See the cards that would have come">🐇 Rabbit hunt<kbd>B</kbd></button>
             <button id="action-next" class="raise-button next-button" type="button" hidden>Next hand <span id="next-count" class="next-count"></span><span aria-hidden="true">→</span></button>
           </div>
         </div>
@@ -161,7 +168,7 @@
       <div class="table-bottomline">
         <span>PLAY FOR FUN · NO REAL MONEY</span>
         <span id="hand-count">HAND #001</span>
-        <span class="bottom-actions"><label class="auto-toggle"><input type="checkbox" id="auto-deal" checked /> <span>Auto-deal</span></label><button id="btn-log" type="button">Log <kbd>L</kbd></button><button id="btn-help" type="button">Help <kbd>H</kbd></button></span>
+        <span class="bottom-actions"><label class="auto-toggle" title="Shows your win chance vs. the price to call"><input type="checkbox" id="coach-toggle" /> <span>Coach</span></label><label class="auto-toggle"><input type="checkbox" id="auto-deal" checked /> <span>Auto-deal</span></label><button id="btn-log" type="button">Log <kbd>L</kbd></button><button id="btn-help" type="button">Help <kbd>H</kbd></button></span>
       </div>
 
       <div id="poker-help" class="help-panel" hidden>
@@ -176,6 +183,7 @@
         <p class="help-ranks">Hands, best to worst: Royal flush · Straight flush · Four of a kind · Full house · Flush · Straight · Three of a kind · Two pair · Pair · High card.</p>
         <p class="help-keys">Keys: <kbd>F</kbd> fold · <kbd>C</kbd> check/call · <kbd>R</kbd> raise · <kbd>←</kbd><kbd>→</kbd> size · <kbd>Enter</kbd> next hand · <kbd>L</kbd> log · <kbd>H</kbd> help</p>
         <p class="help-keys">Heads-up: the dealer posts the small blind, acts first before the flop and last after it.</p>
+        <p class="help-keys">Sit &amp; Go: everyone starts with 1,500 chips, blinds rise every 6 hands, top 3 are paid into your bank. <kbd>B</kbd> rabbit hunt after a fold.</p>
       </div>
       <div id="log-panel" class="help-panel log-panel" hidden>
         <strong>Hand log</strong>
@@ -188,11 +196,21 @@
           <div class="profile-head"><div class="player-avatar" id="profile-avatar">Y</div><div><strong id="profile-title">Player</strong><span id="profile-level">Level 1</span></div></div>
           <div class="profile-xp"><span class="xp-bar big"><i id="profile-xp-fill"></i></span><small id="profile-xp-text">0 / 100 XP</small></div>
           <div class="profile-stats" id="profile-stats"></div>
+          <div id="profile-missions"></div>
           <h3>Achievements <small id="ach-count">0 / 0</small></h3>
           <div class="achievement-grid" id="achievement-grid"></div>
         </div>
       </div>
 
+      <div id="tourney-end" class="tourney-end" role="dialog" aria-modal="true" aria-labelledby="te-title" hidden>
+        <div class="te-card">
+          <span class="te-place" id="te-place">1st</span>
+          <h2 id="te-title">Champion!</h2>
+          <p id="te-sub"></p>
+          <div class="te-rewards"><span id="te-prize">+0 chips</span><span id="te-xp">+0 XP</span></div>
+          <div class="te-actions"><button id="btn-tourney-again" class="primary-button" type="button"><span>Play another</span><span class="cta-arrow" aria-hidden="true">↻</span></button><button id="btn-tourney-menu" class="link-button" type="button">Change table</button></div>
+        </div>
+      </div>
       <div id="toasts" class="toasts" aria-live="polite"></div>
       <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
     </section>

@@ -9,7 +9,13 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SUITS = ['♠', '♥', '♦', '♣'];
-  const SB = 25, BB = 50, START = 1000, TURN_SECONDS = 30, AUTO_DEAL_SECONDS = 5;
+  let SB = 25, BB = 50;                       // current blinds (fixed in cash games, rising in tournaments)
+  const START = 1000, TURN_SECONDS = 30, AUTO_DEAL_SECONDS = 5;
+  // Sit & Go: everyone starts with 1,500; blinds go up every 6 hands; top 3 get paid into your bank.
+  const T_START = 1500, T_HANDS_PER_LEVEL = 6;
+  const T_LEVELS = [[10, 20], [15, 30], [25, 50], [40, 80], [60, 120], [100, 200], [150, 300], [200, 400], [300, 600], [500, 1000], [800, 1600]];
+  const T_PRIZES = [2000, 900, 400], T_XP = [200, 120, 60];
+  let tourney = null;                         // { level, handsAtLevel, field, done }
   const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   const BOT_ROSTER = [
@@ -220,12 +226,16 @@
   // Seat positions per table size. Index 0 is always the hero.
   const LAYOUTS = {
     2: ['seat-hu-hero', 'seat-hu-opp'],
+    3: ['seat-bottom', 'seat-upper-left', 'seat-upper-right'],
+    4: ['seat-bottom', 'seat-mid-left', 'seat-top', 'seat-mid-right'],
+    5: ['seat-bottom', 'seat-lower-left', 'seat-upper-left', 'seat-upper-right', 'seat-lower-right'],
     6: ['seat-bottom', 'seat-lower-left', 'seat-upper-left', 'seat-top', 'seat-upper-right', 'seat-lower-right']
   };
   const MAX_SEATS = 6;
   const EMOTES = ['👍', '😂', '😮', '😎', '🔥', '😭', '🤑', '🙏'];
   let mode = 'solo', selectedMode = 'solo', selectedOpp = 0;   // 'solo' = 6-max vs 5 bots, 'headsup' = 1v1
   let preAction = null, handLog = [], lastLogged = '', titleBlink = null, lastEmoteAt = 0;
+  let heroSawRiver = false, rabbitUsed = false, coachOn = false;
   const blindSeats = () => players.length === 2
     ? { sb: buttonIdx, bb: (buttonIdx + 1) % 2 }                        // heads-up: the button posts the small blind
     : { sb: (buttonIdx + 1) % players.length, bb: (buttonIdx + 2) % players.length };
@@ -270,6 +280,8 @@
     win: () => [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.16, 'triangle', 0.045, i * 0.09)),
     lose: () => beep(196, 0.25, 'sine', 0.03),
     tick: () => beep(760, 0.03, 'sine', 0.02),
+    thump: () => { beep(90, 0.22, 'sine', 0.07); beep(60, 0.3, 'sine', 0.05, 0.05); },
+    heartbeat: () => { beep(70, 0.12, 'sine', 0.06); beep(70, 0.12, 'sine', 0.05, 0.22); },
     achieve: () => [784, 988, 1319].forEach((f, i) => beep(f, 0.18, 'sine', 0.04, i * 0.08))
   };
 
@@ -386,7 +398,9 @@
     { id: 'big_pot', icon: '💰', title: 'High roller', desc: 'Win a pot of 1,500+' },
     { id: 'double_up', icon: '🚀', title: 'Double up', desc: 'Reach a 2,000 chip stack' },
     { id: 'duelist', icon: '⚔️', title: 'Duelist', desc: 'Win a heads-up showdown' },
-    { id: 'chatty', icon: '💬', title: 'Table talk', desc: 'Send your first emote' }
+    { id: 'chatty', icon: '💬', title: 'Table talk', desc: 'Send your first emote' },
+    { id: 'champion', icon: '🏅', title: 'Champion', desc: 'Win a Sit & Go tournament' },
+    { id: 'missions', icon: '🎯', title: 'On a mission', desc: 'Complete all 3 daily missions' }
   ];
   const xpForLevel = l => 50 * l * (l - 1); // L1:0  L2:100  L3:300  L4:600 …
   function levelOf(xp) { let l = 1; while (xp >= xpForLevel(l + 1)) l++; return l; }
@@ -396,7 +410,8 @@
       xp: p.xp || 0, achievements: Array.isArray(p.achievements) ? p.achievements : [],
       lastBonusDay: p.lastBonusDay || null, streak: p.streak || 0,
       handsPlayed: p.handsPlayed || 0, handsWon: p.handsWon || 0, biggestPot: p.biggestPot || 0,
-      bestStack: p.bestStack || START, winStreak: 0, bestWinStreak: p.bestWinStreak || 0
+      bestStack: p.bestStack || START, winStreak: 0, bestWinStreak: p.bestWinStreak || 0,
+      tourneys: p.tourneys || 0, tourneyWins: p.tourneyWins || 0, missions: p.missions || null
     };
   }
   function saveProfile() { if (profile) store.set('kanai_progress_' + username.toLowerCase(), profile); }
@@ -406,7 +421,7 @@
     const after = levelOf(profile.xp);
     if (after > before) {
       const reward = 150 * after;
-      hero().stack += reward;
+      creditBank(reward);
       sfx.achieve();
       toast(`Level ${after}!`, `+${money(reward)} chips reward`, '⬆', 'level');
       confetti(28);
@@ -428,7 +443,7 @@
     profile.streak = profile.lastBonusDay === dayKey(y) ? profile.streak + 1 : 1;
     profile.lastBonusDay = today;
     const bonus = 100 * Math.min(profile.streak, 7);
-    hero().stack += bonus;
+    creditBank(bonus);
     saveProfile();
     return bonus;
   }
@@ -447,8 +462,9 @@
     $('profile-xp-fill').style.width = ((profile.xp - lo) / (hi - lo) * 100).toFixed(1) + '%';
     $('profile-xp-text').textContent = `${money(profile.xp - lo)} / ${money(hi - lo)} XP to level ${lvl + 1}`;
     const rate = profile.handsPlayed ? Math.round(profile.handsWon / profile.handsPlayed * 100) : 0;
-    const stats = [['Hands', money(profile.handsPlayed)], ['Won', money(profile.handsWon)], ['Win rate', rate + '%'], ['Biggest pot', money(profile.biggestPot)], ['Best stack', money(profile.bestStack)], ['Best streak', money(profile.bestWinStreak)]];
+    const stats = [['Hands', money(profile.handsPlayed)], ['Won', money(profile.handsWon)], ['Win rate', rate + '%'], ['Biggest pot', money(profile.biggestPot)], ['Best stack', money(profile.bestStack)], ['Best streak', money(profile.bestWinStreak)], ['Tournaments', money(profile.tourneys || 0)], ['Titles', money(profile.tourneyWins || 0)], ['Missions today', `${profile.missions ? profile.missions.list.filter(m => m.done).length : 0}/3`]];
     $('profile-stats').innerHTML = stats.map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('');
+    $('profile-missions').innerHTML = missionsHTML();
     $('ach-count').textContent = `${profile.achievements.length} / ${ACHIEVEMENTS.length}`;
     $('achievement-grid').innerHTML = ACHIEVEMENTS.map(a => {
       const got = profile.achievements.includes(a.id);
@@ -597,6 +613,16 @@
     setNumber($('pot-value'), pot, 380);
     if (opts.potBump) { const pd = $('pot-display'); pd.classList.remove('bump'); void pd.offsetWidth; pd.classList.add('bump'); }
     setText($('hand-count'), `HAND #${String(handNo).padStart(3, '0')}`);
+    setText($('blind-meta'), `${SB} / ${BB}`);
+    setText($('bank-label'), tourney ? 'TOURNAMENT STACK' : 'YOUR BANK');
+    const hud = $('tourney-hud');
+    if (hud) {
+      hud.hidden = !tourney;
+      if (tourney) {
+        const left = T_HANDS_PER_LEVEL - tourney.handsAtLevel + 1;
+        hud.innerHTML = `<b>LEVEL ${tourney.level + 1}</b><span>${SB}/${BB}</span><span>${tourney.level < T_LEVELS.length - 1 ? `next in ${left} hand${left === 1 ? '' : 's'}` : 'max level'}</span><span>${players.filter(p => p.stack > 0 || !finished).length}/${tourney.field} left</span>`;
+      }
+    }
     if (opts.winIds) winIdsNow = opts.winIds;
     renderHeroCards(winIdsNow);
     renderBoard(winIdsNow);
@@ -620,7 +646,8 @@
     $('action-check').hidden = !act || toCall > 0;
     $('action-call').hidden = !act || toCall <= 0;
     $('action-raise').hidden = !act;
-    $('action-next').hidden = !finished;
+    $('action-next').hidden = !finished || !!(tourney && (tourney.done || tourney.ending));
+    $('btn-rabbit').hidden = !finished || board.length >= 5 || rabbitUsed || !!(tourney && (tourney.done || tourney.ending));
     const waiting = phase === 'betting' && !finished && !act && h.hole && h.hole.length && !h.folded && !h.allIn && !runout;
     $('pre-actions').hidden = !waiting;
     if (waiting) {
@@ -654,6 +681,7 @@
       setText($('bet-amount'), '—');
     }
     setText($('bet-label'), toCall > 0 || street === 'preflop' ? 'RAISE TO' : 'BET');
+    updateCoach();
   }
   function syncBetAmount() {
     const range = $('bet-range'), h = hero();
@@ -716,10 +744,12 @@
      ====================================================================== */
   function initPlayers() {
     const bots = mode === 'headsup' ? [BOT_ROSTER[selectedOpp] || BOT_ROSTER[0]] : BOT_ROSTER;
+    tourney = mode === 'tourney' ? { level: 0, handsAtLevel: 0, field: 1 + bots.length, done: false } : null;
     players = [
       { isHero: true, name: username, initial: (username[0] || 'Y').toUpperCase(), flag: heroFlag, avatar: 'linear-gradient(145deg,#8a5bff,#5b38b0)', stack: START, style: 'You' },
       ...bots.map(b => ({ ...b, isHero: false, initial: b.name[0], stack: mode === 'headsup' ? START : 700 + Math.floor(Math.random() * 900) }))
     ];
+    if (tourney) players.forEach(p => { p.stack = T_START; });
     buttonIdx = Math.floor(Math.random() * players.length);
     boardSlots = null;
     buildSeats();
@@ -736,13 +766,19 @@
     $('winner-banner').hidden = true;
     $('hand-message').hidden = false;
     if (!players.length) initPlayers();
-    if (hero().stack < BB) { hero().stack = START; toast('Seat topped up', `Back to ${money(START)} chips`, '🪙'); }
-    players.forEach((p, i) => {
+    if (tourney) {
+      if (tourney.done) return;
+      if (hero().stack <= 0) { endTourney(heroTourneyPlace()); return; }   // never deal a busted hero in
+      if (!tourneyBeforeHand()) return;
+    }
+    else if (hero().stack < BB) { hero().stack = START; toast('Seat topped up', `Back to ${money(START)} chips`, '🪙'); }
+    if (!tourney) players.forEach((p, i) => {
       if (i === 0 || p.stack >= BB * 4) return;
       p.stack = mode === 'headsup' ? START : 600 + Math.floor(Math.random() * 1000);
       if (mode === 'headsup') { toast(`${p.name} rebuys`, `Back to ${money(START)} chips — keep the pressure on`, '🔁'); pushLog(`${p.name} rebuys for ${money(START)}.`, 'info'); }
     });
-    players.forEach(p => Object.assign(p, { hole: [], bet: 0, committed: 0, folded: false, allIn: false, acted: false, last: '', reveal: false, winner: false, winAmount: 0, equity: null, handName: '', winCards: null }));
+    players.forEach(p => Object.assign(p, { hole: [], bet: 0, committed: 0, folded: false, allIn: false, acted: false, last: '', reveal: false, winner: false, winAmount: 0, equity: null, handName: '', winCards: null, handStart: p.stack }));
+    heroSawRiver = false; rabbitUsed = false;
 
     handNo++; sessionStats.handsPlayed++;
     handStartedAt = Date.now(); handStartStack = hero().stack; actionIndex = 0; revealedHands = [];
@@ -760,7 +796,7 @@
     message = 'Blinds posted. Cards in the air.';
     preAction = null;
     handLog = []; lastLogged = '';
-    pushLog(`Hand #${handNo} · ${players.length === 2 ? 'Heads-up' : '6-max'} · blinds ${SB}/${BB}`, 'head');
+    pushLog(`Hand #${handNo} · ${tourney ? `Tournament level ${tourney.level + 1}` : players.length === 2 ? 'Heads-up' : '6-max'} · blinds ${SB}/${BB}`, 'head');
     pushLog(`You hold ${hero().hole.map(cardCode).join(' ')}.`, 'hero');
     sfx.deal();
     render();
@@ -772,6 +808,60 @@
       buttonSeat: buttonIdx, startedAt: new Date(handStartedAt).toISOString()
     });
     later(760, schedule);
+  }
+
+  /* ---------- tournament (Sit & Go) ---------- */
+  const ordinal = n => n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th');
+  // Runs before each tournament hand: removes busted players, raises blinds. Returns false when it's over.
+  function tourneyBeforeHand() {
+    const busted = players.filter(p => p.stack <= 0 && !p.isHero).sort((a, b) => (a.handStart || 0) - (b.handStart || 0));
+    if (busted.length) {
+      let place = players.filter(p => p.stack > 0).length + busted.length;
+      busted.forEach(p => { toast(`${p.name} is out`, `Finished ${ordinal(place)}`, '💀'); pushLog(`${p.name} is eliminated in ${ordinal(place)} place.`, 'info'); place--; });
+      const oldButton = buttonIdx;
+      let anchor = null;
+      for (let k = 0; k < players.length; k++) { const q = players[(oldButton - k + players.length) % players.length]; if (q.stack > 0) { anchor = q; break; } }
+      players = players.filter(p => p.stack > 0);
+      buttonIdx = Math.max(0, players.indexOf(anchor));
+      boardSlots = null;
+      buildSeats();
+    }
+    if (players.length === 1) { endTourney(1); return false; }
+    tourney.handsAtLevel++;
+    if (tourney.handsAtLevel > T_HANDS_PER_LEVEL && tourney.level < T_LEVELS.length - 1) {
+      tourney.level++; tourney.handsAtLevel = 1;
+      [SB, BB] = T_LEVELS[tourney.level];
+      stamp('BLINDS UP', 'gold'); sfx.raise();
+      toast(`Blinds up · Level ${tourney.level + 1}`, `Now ${SB}/${BB} — pressure is rising`, '⏫');
+    } else [SB, BB] = T_LEVELS[tourney.level];
+    return true;
+  }
+  function heroTourneyPlace() {
+    const alive = players.filter(p => p.stack > 0).length;
+    const out = players.filter(p => p.stack <= 0).sort((a, b) => (b.handStart || 0) - (a.handStart || 0));
+    return alive + 1 + Math.max(0, out.indexOf(hero()));
+  }
+  function endTourney(place) {
+    if (!tourney || tourney.done) return;
+    tourney.done = true;
+    stopAutoDeal(); clearTimeout(pending); clearTurnTimer();
+    const prize = T_PRIZES[place - 1] || 0, xp = T_XP[place - 1] || 25;
+    if (prize) creditBank(prize);
+    profile.tourneys = (profile.tourneys || 0) + 1;
+    if (place === 1) { profile.tourneyWins = (profile.tourneyWins || 0) + 1; unlock('champion'); }
+    if (place <= 3) missionEvent('itm');
+    addXP(xp);
+    saveProfile(); save();
+    const el = $('tourney-end');
+    $('te-place').textContent = ordinal(place);
+    $('te-title').textContent = place === 1 ? 'Champion!' : place <= 3 ? `You finished ${ordinal(place)} — in the money!` : `You finished ${ordinal(place)}`;
+    $('te-sub').textContent = place === 1 ? `You took every chip at a table of ${tourney.field}.` : place <= 3 ? 'Paid into your bank. One more run?' : 'So close. The blinds wait for no one — try again?';
+    $('te-prize').textContent = prize ? `+${money(prize)} chips` : 'No prize';
+    $('te-xp').textContent = `+${xp} XP`;
+    toggle(el, 'win', place <= 3);
+    el.hidden = false;
+    if (place <= 3) { sfx.win(); confetti(place === 1 ? 80 : 40); } else sfx.lose();
+    updateControls();
   }
 
   function nextToAct(start) {
@@ -829,6 +919,7 @@
       sfx.raise();
     }
     p.acted = true;
+    if (p.allIn && (kind === 'call' || kind === 'raise')) { stamp('ALL-IN'); shake(1); sfx.thump(); }
     return amount;
   }
 
@@ -951,6 +1042,8 @@
     if (street === 'preflop') { board.push(deck.pop(), deck.pop(), deck.pop()); street = 'flop'; }
     else if (street === 'flop') { board.push(deck.pop()); street = 'turn'; }
     else { board.push(deck.pop()); street = 'river'; }
+    if (boardSlots && boardSlots[4]) toggle(boardSlots[4], 'sweat', false);
+    if (street === 'river' && !hero().folded) heroSawRiver = true;
     sfx.deal();
     if (runout) {
       const lv = live();
@@ -963,7 +1056,11 @@
     toActIdx = (buttonIdx + 1) % players.length;
     render();
     sendEvent('community_cards_dealt', { street, boardCards: board.map(cardCode), activeOpponentCount: live().length - 1 });
-    if (runout) later(1350, street === 'river' ? showdown : dealStreet);
+    if (runout) {
+      const riverNext = street === 'turn';
+      if (riverNext && boardSlots && boardSlots[4]) { toggle(boardSlots[4], 'sweat', true); sfx.heartbeat(); }
+      later(riverNext ? 2100 : 1350, street === 'river' ? showdown : dealStreet);
+    }
     else later(720, schedule);
   }
 
@@ -1078,7 +1175,18 @@
     if (h.stack >= 2000) unlock('double_up');
     saveProfile();
 
-    if (res.heroWon) { sfx.win(); if (res.heroWin >= 400) confetti(res.heroWin >= 1200 ? 60 : 34); } else sfx.lose();
+    // Daily missions
+    missionEvent('hand');
+    if (res.heroWon) missionEvent('win');
+    if (res.heroWon && res.showdown && categoryOf(h.value || 0) >= 1) missionEvent('sdwin');
+    if (res.heroWon && !res.showdown && heroAggressed) missionEvent('pressure');
+    if (res.heroWin >= 500) missionEvent('bigpot');
+    if (res.heroWon && players.length === 2) missionEvent('huwin');
+    if (heroSawRiver) missionEvent('river');
+    if (!h.folded && board.length === 5 && categoryOf(scoreOf([...h.hole, ...board])) >= 2) missionEvent('made2p');
+    saveProfile();
+
+    if (res.heroWon) { sfx.win(); if (res.heroWin >= 400) confetti(res.heroWin >= 1200 ? 60 : 34); if (res.heroWin >= 1000) { stamp('BIG POT!', 'gold'); shake(2); } } else sfx.lose();
     botReactions(res);
 
     const banner = $('winner-banner');
@@ -1090,7 +1198,20 @@
 
     render({ potBump: true, winIds: res.winIds });
     save();
+    if (tourney) {
+      const alive = players.filter(p => p.stack > 0);
+      if (h.stack <= 0 || alive.length === 1) {
+        tourney.ending = true;                 // hides "Next hand" while the result sinks in
+        const place = h.stack <= 0 ? heroTourneyPlace() : 1;
+        updateControls();
+        setTimeout(() => endTourney(place), 1700);
+        return sendFinished(res, h, net);
+      }
+    }
     startAutoDeal();
+    sendFinished(res, h, net);
+  }
+  function sendFinished(res, h, net) {
     sendEvent('hand_finished', {
       handNumber: handNo, winners: res.winners, winnerIsPlayer: res.heroWon, result: res.title + ' ' + res.sub,
       pot: res.finalPot, endingStack: h.stack, netChips: net, handName: res.handName || null, potCount: res.potCount || 1,
@@ -1098,9 +1219,150 @@
     });
   }
 
+  // Your persistent bank lives in storage; in cash games it is the hero's stack,
+  // in a tournament the stack is tournament chips and the bank is left untouched.
+  const bankKey = () => 'kanai_' + username.toLowerCase();
+  let creditedTotal = 0;                      // rewards paid by the game (bonus, levels, missions, prizes)
+  function creditBank(amount) {
+    creditedTotal += amount;
+    if (mode !== 'tourney' && players.length) { hero().stack += amount; return; }
+    const saved = store.get(bankKey(), {});
+    store.set(bankKey(), { ...saved, heroStack: (typeof saved.heroStack === 'number' ? saved.heroStack : START) + amount });
+  }
   function save() {
-    store.set('kanai_' + username.toLowerCase(), { heroStack: hero().stack, handNo });
+    const saved = store.get(bankKey(), {});
+    store.set(bankKey(), { ...saved, heroStack: mode === 'tourney' ? (typeof saved.heroStack === 'number' ? saved.heroStack : START) : hero().stack, handNo });
     store.set('kanai_last_player', username);
+  }
+
+  /* ======================================================================
+     Daily missions — three per day, seeded by date, guaranteed reward + random bonus
+     ====================================================================== */
+  const MISSION_POOL = [
+    { id: 'play15', text: 'Play 15 hands', goal: 15, ev: 'hand' },
+    { id: 'win3', text: 'Win 3 pots', goal: 3, ev: 'win' },
+    { id: 'win6', text: 'Win 6 pots', goal: 6, ev: 'win' },
+    { id: 'sdwin', text: 'Win 2 showdowns with a pair or better', goal: 2, ev: 'sdwin' },
+    { id: 'river5', text: 'See the river 5 times', goal: 5, ev: 'river' },
+    { id: 'pressure2', text: 'Win 2 pots with a bet — no showdown', goal: 2, ev: 'pressure' },
+    { id: 'bigpot', text: 'Win a pot of 500+', goal: 1, ev: 'bigpot' },
+    { id: 'hu3', text: 'Win 3 heads-up hands', goal: 3, ev: 'huwin' },
+    { id: 'itm', text: 'Finish top 3 in a tournament', goal: 1, ev: 'itm' },
+    { id: 'made2p', text: 'Make two pair or better 3 times', goal: 3, ev: 'made2p' }
+  ];
+  function seeded(seed) {
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; };
+  }
+  function ensureMissions() {
+    if (!profile) return;
+    const day = dayKey();
+    if (profile.missions && profile.missions.day === day) return;
+    const rnd = seeded('kanai|' + day + '|' + username.toLowerCase());
+    const pool = MISSION_POOL.slice(), pick = [];
+    while (pick.length < 3) pick.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+    profile.missions = { day, list: pick.map(m => ({ id: m.id, progress: 0, done: false, reward: 0 })) };
+  }
+  function missionEvent(ev, amount = 1) {
+    if (!profile) return;
+    ensureMissions();
+    profile.missions.list.forEach(m => {
+      const def = MISSION_POOL.find(d => d.id === m.id);
+      if (!def || m.done || def.ev !== ev) return;
+      m.progress = Math.min(def.goal, m.progress + amount);
+      if (m.progress < def.goal) return;
+      m.done = true;
+      m.reward = 150 + Math.round(Math.random() * 20) * 10;   // guaranteed 150 + a 0–200 surprise
+      creditBank(m.reward);
+      sfx.achieve();
+      toast('Mission complete', `${def.text} · +${money(m.reward)} chips`, '🎯', 'bonus');
+      addXP(40);
+      if (profile.missions.list.every(x => x.done)) unlock('missions');
+    });
+    renderMissionBadge();
+  }
+  function renderMissionBadge() {
+    const b = $('mission-badge');
+    if (!b || !profile) return;
+    ensureMissions();
+    const done = profile.missions.list.filter(m => m.done).length;
+    setText(b, `🎯 ${done}/3`);
+    toggle(b, 'complete', done === 3);
+  }
+  function missionsHTML() {
+    ensureMissions();
+    const now = new Date(), midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
+    const mins = Math.max(0, Math.round((midnight - now) / 60000));
+    const items = profile.missions.list.map(m => {
+      const def = MISSION_POOL.find(d => d.id === m.id) || { text: m.id, goal: 1 };
+      const pct = Math.round(m.progress / def.goal * 100);
+      return `<div class="mission${m.done ? ' done' : ''}"><div class="m-top"><span>${escapeHTML(def.text)}</span><b>${m.done ? `+${money(m.reward)}` : `${m.progress}/${def.goal}`}</b></div><span class="m-bar"><i style="width:${pct}%"></i></span></div>`;
+    }).join('');
+    return `<h3>Daily missions <small>resets in ${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m</small></h3><div class="missions">${items}</div>`;
+  }
+
+  /* ---------- extra juice: stamps, shake, rabbit hunt ---------- */
+  function stamp(text, cls = '') {
+    const layer = $('fx-layer');
+    if (!layer || REDUCED || !document.createElement) return;
+    const el = document.createElement('div');
+    el.className = 'stamp ' + cls; el.textContent = text;
+    layer.appendChild(el);
+    setTimeout(() => el.remove && el.remove(), 1150);
+  }
+  function shake(level) {
+    const f = $('table-felt');
+    if (!f || REDUCED || !f.classList) return;
+    f.classList.remove('shake-1', 'shake-2'); void f.offsetWidth; f.classList.add('shake-' + level);
+  }
+  // Reveal the board cards that would have come (same burn order as the real deal).
+  function rabbitHunt() {
+    if (!finished || board.length >= 5 || rabbitUsed) return;
+    rabbitUsed = true;
+    const d = deck.slice(), extra = [];
+    while (board.length + extra.length < 5) {
+      d.pop();
+      if (board.length + extra.length === 0) extra.push(d.pop(), d.pop(), d.pop()); else extra.push(d.pop());
+    }
+    ensureBoard();
+    extra.forEach((c, k) => {
+      const slot = boardSlots[board.length + k];
+      slot._id = 'r' + c.id;
+      if (slot.style && slot.style.setProperty) slot.style.setProperty('--d', (k * 0.14) + 's');
+      slot.innerHTML = cardHTML(c, ' dealt rabbit');
+    });
+    const h = hero(), el = $('hero-hand');
+    if (h.hole && h.hole.length) { el.hidden = false; setText(el, 'Would have made: ' + describe(scoreOf([...h.hole, ...board, ...extra]))); }
+    pushLog(`Rabbit hunt: ${extra.map(cardCode).join(' ')}`, 'info');
+    sfx.deal();
+    updateControls();
+  }
+
+  /* ---------- coach: equity vs. price, from your own cards only ---------- */
+  function updateCoach() {
+    const el = $('coach-tip');
+    if (!el) return;
+    if (!coachOn || !heroCanAct()) { el.hidden = true; return; }
+    const h = hero(), opps = live().length - 1;
+    const toCall = Math.max(0, currentBet - h.bet);
+    const key = [handNo, street, currentBet, h.bet, opps].join('|');
+    el.hidden = false;
+    if (el._k === key) return;
+    el._k = key;
+    const eq = estimateEquity(h.hole, board, opps, 700);
+    const need = toCall ? toCall / (pot + toCall) : 0;
+    const pct = x => Math.round(x * 100) + '%';
+    let verdict, tone;
+    if (!toCall) {
+      if (eq > 0.62 || (opps === 1 && eq > 0.56)) { verdict = 'Strong — bet for value'; tone = 'good'; }
+      else if (eq > 1 / (opps + 1)) { verdict = 'Decent — a small bet or a check both work'; tone = 'ok'; }
+      else { verdict = 'Weak — checking is free'; tone = 'meh'; }
+    } else if (eq >= need + 0.15 && eq > 0.5) { verdict = 'Ahead of the price — raise or call'; tone = 'good'; }
+    else if (eq >= need) { verdict = 'Price is right — calling is profitable'; tone = 'ok'; }
+    else { verdict = 'Behind the price — folding is fine'; tone = 'bad'; }
+    el.className = 'coach-tip ' + tone;
+    el.innerHTML = `<span><b>Coach</b> ~${pct(eq)} to win vs ${opps} ${opps === 1 ? 'opponent' : 'opponents'}${toCall ? ` · need ${pct(need)} to call` : ''}</span><em>${verdict}</em>`;
   }
 
   /* ======================================================================
@@ -1194,6 +1456,10 @@
     syncBetAmount();
     sendEvent('bet_preset_selected', { preset, selectedRaiseTo: Number(range.value) });
   }));
+  $('btn-rabbit').addEventListener('click', rabbitHunt);
+  $('coach-toggle').addEventListener('change', e => { coachOn = e.target.checked; store.set('kanai_coach', coachOn); const el = $('coach-tip'); if (el) el._k = ''; updateCoach(); });
+  $('btn-tourney-again').addEventListener('click', () => { $('tourney-end').hidden = true; initPlayers(); startHand(); });
+  $('btn-tourney-menu').addEventListener('click', () => { location.href = location.pathname; });
   $('pre-checkfold').addEventListener('click', () => { preAction = preAction === 'checkfold' ? null : 'checkfold'; updateControls(); });
   $('pre-callany').addEventListener('click', () => { preAction = preAction === 'callany' ? null : 'callany'; updateControls(); });
   $('btn-emote').addEventListener('click', () => { const m = $('emote-menu'); m.hidden = !m.hidden; });
@@ -1230,7 +1496,9 @@
     const k = (e.key || '').toLowerCase();
     if (k === 'h') { e.preventDefault(); togglePanel('poker-help'); return; }
     if (k === 'l') { e.preventDefault(); togglePanel('log-panel'); return; }
-    if (finished && (k === 'enter' || k === ' ' || k === 'n')) { e.preventDefault(); startHand(); return; }
+    if (!$('tourney-end').hidden) return;
+    if (finished && k === 'b') { e.preventDefault(); rabbitHunt(); return; }
+    if (finished && (k === 'enter' || k === ' ' || k === 'n')) { e.preventDefault(); if (!$('action-next').hidden) startHand(); return; }
     if (!heroCanAct()) return;
     if (k === 'f') { e.preventDefault(); heroAct('fold'); }
     else if (k === 'c') { e.preventDefault(); heroAct('call'); }
@@ -1256,7 +1524,7 @@
     });
 
     // Table picker: 6-max vs five bots, or a heads-up duel against one chosen opponent.
-    selectedMode = store.get('kanai_mode', 'solo') === 'headsup' ? 'headsup' : 'solo';
+    selectedMode = ['headsup', 'tourney'].includes(store.get('kanai_mode', 'solo')) ? store.get('kanai_mode', 'solo') : 'solo';
     selectedOpp = Math.max(0, Math.min(BOT_ROSTER.length - 1, Number(store.get('kanai_opp', 0)) || 0));
     const oppHost = $('opponent-picker');
     if (oppHost) oppHost.innerHTML = BOT_ROSTER.map((b, i) => `<button type="button" class="opp" data-opp="${i}" role="radio" aria-checked="false" title="${escapeHTML(b.name)} — ${escapeHTML(b.style)}"><span class="opp-avatar" style="background:${b.avatar}">${b.name[0]}</span><b>${escapeHTML(b.name.split(' ')[0])}</b><small>${escapeHTML(b.style)}</small></button>`).join('');
@@ -1267,7 +1535,7 @@
       const hu = $('hu-options'); if (hu) hu.hidden = selectedMode !== 'headsup';
       const btnText = $('btn-play-text');
       if (btnText && !$('btn-play').disabled) btnText.textContent = bonusReady ? 'Play & claim bonus'
-        : selectedMode === 'headsup' ? `Challenge ${BOT_ROSTER[selectedOpp].name.split(' ')[0]}` : returning ? 'Continue playing' : 'Play now';
+        : selectedMode === 'headsup' ? `Challenge ${BOT_ROSTER[selectedOpp].name.split(' ')[0]}` : selectedMode === 'tourney' ? 'Start the tournament' : returning ? 'Continue playing' : 'Play now';
     };
     document.querySelectorAll('.mode-card').forEach(btn => btn.addEventListener('click', () => { selectedMode = btn.dataset.mode; syncPicker(); }));
     document.querySelectorAll('.opp').forEach(btn => btn.addEventListener('click', () => { selectedOpp = Number(btn.dataset.opp); syncPicker(); }));
@@ -1306,13 +1574,17 @@
     soundOn = store.get('kanai_sound', true) !== false;
     $('btn-sound').classList.toggle('is-muted', !soundOn);
     $('auto-deal').checked = store.get('kanai_autodeal', true) !== false;
-    mode = selectedMode === 'headsup' ? 'headsup' : 'solo';
+    mode = ['headsup', 'tourney'].includes(selectedMode) ? selectedMode : 'solo';
     store.set('kanai_mode', mode); store.set('kanai_opp', selectedOpp);
     initPlayers();
     const data = store.get('kanai_' + username.toLowerCase(), {});
-    if (typeof data.heroStack === 'number') hero().stack = data.heroStack;
+    if (typeof data.heroStack === 'number' && mode !== 'tourney') hero().stack = data.heroStack;
     if (typeof data.handNo === 'number') handNo = data.handNo;
     profile = loadProfile(username);
+    ensureMissions(); renderMissionBadge();
+    const coachPref = store.get('kanai_coach', null);
+    coachOn = coachPref === null ? profile.handsPlayed < 40 : !!coachPref;
+    $('coach-toggle').checked = coachOn;
     $('hero-avatar').textContent = (username[0] || 'Y').toUpperCase();
     renderProgress();
     const bonus = claimDailyBonus();
@@ -1332,5 +1604,5 @@
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
   }
   // Exposed for automated tests only (no effect on gameplay).
-  window.__kanaiTest = { evaluate: scoreOf, describe, showdownEquity, buildPots: () => buildPots(), state: () => ({ players, pot, board, street, phase, finished, buttonIdx, actorIdx, currentBet }) };
+  window.__kanaiTest = { evaluate: scoreOf, describe, showdownEquity, buildPots: () => buildPots(), state: () => ({ players, pot, board, street, phase, finished, buttonIdx, actorIdx, currentBet, tourney, SB, BB, credited: creditedTotal }) };
 })();
